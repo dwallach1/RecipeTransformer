@@ -18,6 +18,15 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
+DEBUG = True
+
+class Ingredient(object):
+	"""
+	"""
+	def __init__(self, description):
+		pass
+
+
 
 class Recipe(object):
 	"""
@@ -28,7 +37,14 @@ class Recipe(object):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
-		
+	
+	def parse_ingredients(self):
+		"""
+		Updates ingredient descriptions parsed from AllRecipes.com and stores them in Ingredient objects.
+		These objects then pick apart the description and store the information in its correlated fields. 
+		"""
+		ingredient_objects = [Ingredient(ing) for ing in self.ingredients]
+		self.ingredients = ingredient_objects
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -92,12 +108,12 @@ def parse_url(url):
 	sodium  = soup.find('span', {'itemprop': 'sodiumContent'}).text			        # measured in grams
 
 		
-
-	# print ('recipe is called {}'.format(name))
-	# print ('prep time is {} minutes, cook time is {} minutes and total time is {} minutes'.format(preptime, cooktime, totaltime))
-	# print ('it has {} ingredients'.format(len(ingredients)))
-	# print ('it has {} directions'.format(len(directions)))
-	# print ('it has {} calories, {} g of carbs, {} g of fat, {} g of protien, {} mg of cholesterol, {} mg of sodium'.format(calories, carbs, fat, protien, cholesterol, sodium))
+	if DEBUG:
+		print ('recipe is called {}'.format(name))
+		print ('prep time is {} minutes, cook time is {} minutes and total time is {} minutes'.format(preptime, cooktime, totaltime))
+		print ('it has {} ingredients'.format(len(ingredients)))
+		print ('it has {} directions'.format(len(directions)))
+		print ('it has {} calories, {} g of carbs, {} g of fat, {} g of protien, {} mg of cholesterol, {} mg of sodium'.format(calories, carbs, fat, protien, cholesterol, sodium))
 
 
 	return {
@@ -113,17 +129,39 @@ def parse_url(url):
 			'protien': protien,
 			'cholesterol': cholesterol,
 			'sodium': sodium
-
 			}
 
 
+def user_input():
+	"""
+	Asks user what kind of transformations they would like to perform
+	"""
+	options = ['To vegetarian? (y/n) ', 'From vegetarian? (y/n) ', 'To healthy? (y/n) ', 'From healthy? (y/n) ']
+	responses = []
+	d = {'y': 1, 'n': 0}
+	answered = False
+	for opt in options:
+		while not answered:
+			try:
+				ans = d[raw_input(opt)]
+			except KeyError:
+				continue
+			else:
+				answered = True
+				responses.append(ans)
+		answered = False
+	return responses
+
 
 def main():
-	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
-	test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
+	transformations = user_input()
+	print (transformations)
 
 
 if __name__ == "__main__":
