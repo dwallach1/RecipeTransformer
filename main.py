@@ -22,9 +22,96 @@ DEBUG = True
 
 class Ingredient(object):
 	"""
+	Represents an Ingredient in the recipe. Ingredients have assoiciated quantities, names, measurements, 
+	preperation methods (i.e. finley chopped), and descriptors (i.e. fresh, extra-virgin)
 	"""
 	def __init__(self, description):
-		pass
+		self.name = self.find_name(description)
+		self.amount = self.find_amount(description)
+		self.measurement = self.find_measurement(description)
+		self.descriptors = self.find_descriptors(description)
+		self.preperation = self.find_preperation(description)
+
+		if DEBUG:
+			print ('parsing ingredient: {}'.format(description))
+			print ('name: {}'.format(self.name))
+			print ('amount: {}'.format(self.amount))
+			print ('measurement: {}'.format(self.measurement))
+			print ('descriptors: {}'.format(self.descriptors))
+		
+
+
+	def find_name(self, description):
+		"""
+		looks for name of the ingredient from the desciption
+		"""
+		candidate = description.split(',')[0]
+		name = candidate.split(' ')[-1]
+		return name
+
+
+	def find_amount(self, description):
+		"""
+		looks for amount descriptors in the ingredient description.
+		if none are apparent, it returns zero. Else it converts fractions to floats and
+		aggregates measurement (i.e. 1 3/4 --> 1.75)
+		"""
+		wholes = re.match(r'([0-9])\s', description)
+		fractions = re.search(r'([0-9]\/[0-9])', description)
+
+		if fractions: 
+			fractions = fractions.groups(0)[0]
+			num = float(fractions[0])
+			denom = float(fractions[-1])
+			fractions = num / denom
+		
+		if wholes: wholes = int(wholes.groups(0)[0])
+
+		total = float(wholes or 0.0) + float(fractions or 0.0)
+
+		return total
+
+
+	def find_measurement(self, description):
+		"""
+		looks for measurements such as cups, teaspoons, etc.
+		"""
+		words = description.split(' ')
+		prev_numeric = False
+		for word in words:
+			numeric = re.search('[0-9]', word)
+			if numeric:
+				prev_numeric = True
+
+			if not numeric and prev_numeric:
+				return word
+
+		return None
+
+	def find_descriptors(self, description):
+		"""
+		looks for descriptions such as fresh, extra-virgin
+		"""
+		candidates = []
+		candidate = description.split(',')
+		if len(candidate) > 1:
+			candidates.append(candidate[-1])
+
+		prev_numeric = False
+		idx = 0
+		for i, word in enumerate(candidate[0].split(' ')):
+			numeric = re.search('[0-9]', word)
+			if numeric:
+				prev_numeric = True
+
+			if not numeric and prev_numeric:
+				idx = i
+				break
+		if idx != 0:
+			candidates.extend(candidate[0].split(' ')[idx+1:-1])
+					
+		return candidates
+
 
 
 
@@ -37,15 +124,9 @@ class Recipe(object):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
+		self.ingredients = [Ingredient(ing) for ing in self.ingredients]	# store ingredients in Ingredient objects
 	
-	def parse_ingredients(self):
-		"""
-		Updates ingredient descriptions parsed from AllRecipes.com and stores them in Ingredient objects.
-		These objects then pick apart the description and store the information in its correlated fields. 
-		"""
-		ingredient_objects = [Ingredient(ing) for ing in self.ingredients]
-		self.ingredients = ingredient_objects
-
+	
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
 
@@ -160,8 +241,8 @@ def main():
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
-	transformations = user_input()
-	print (transformations)
+	# transformations = user_input()
+	# print (transformations)
 
 
 if __name__ == "__main__":
