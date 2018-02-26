@@ -14,3 +14,21 @@ The program then outputs a JSON representation of the new ingredients and change
 # Dependencies 
 	* Used Python2.7 but works with Python3 as well. 
 	* BeautifulSoup
+
+
+# Usage 
+
+```python
+# set URL variable to point to a AllRecipes.com url
+URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+
+# parse the URL to get relevant information
+recipe_attrs = parse_url(test_url) 		# parse_url returns a dict with data to populate a Recipe object
+recipe = Recipe(**recipe_attrs)			# instantiate the Recipe object by unpacking dictionary
+
+# apply a transformation
+
+recipe_vegan = recipe.to_vegan()	
+recipe_vegan.print_pretty()				# print the new recipe 
+
+```
