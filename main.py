@@ -18,7 +18,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
-DEBUG = True
+DEBUG = False
 
 class Ingredient(object):
 	"""
@@ -27,15 +27,15 @@ class Ingredient(object):
 	"""
 	def __init__(self, description):
 		self.name = self.find_name(description)
-		self.amount = self.find_amount(description)
+		self.quantity = self.find_quantity(description)
 		self.measurement = self.find_measurement(description)
-		self.descriptors = self.find_descriptors(description)
+		self.descriptor = self.find_descriptor(description)
 		self.preperation = self.find_preperation(description)
 
 		if DEBUG:
 			print ('parsing ingredient: {}'.format(description))
 			print ('name: {}'.format(self.name))
-			print ('amount: {}'.format(self.amount))
+			print ('quantity: {}'.format(self.quantity))
 			print ('measurement: {}'.format(self.measurement))
 			print ('descriptors: {}'.format(self.descriptors))
 		
@@ -50,7 +50,7 @@ class Ingredient(object):
 		return name
 
 
-	def find_amount(self, description):
+	def find_quantity(self, description):
 		"""
 		looks for amount descriptors in the ingredient description.
 		if none are apparent, it returns zero. Else it converts fractions to floats and
@@ -88,7 +88,7 @@ class Ingredient(object):
 
 		return None
 
-	def find_descriptors(self, description):
+	def find_descriptor(self, description):
 		"""
 		looks for descriptions such as fresh, extra-virgin
 		"""
@@ -113,7 +113,13 @@ class Ingredient(object):
 		return candidates
 
 
+	def find_preperation(self, description):
+		"""
+		find all preperations (finely, chopped)
+		"""
+		pass
 
+		
 
 class Recipe(object):
 	"""
@@ -127,6 +133,37 @@ class Recipe(object):
 		self.ingredients = [Ingredient(ing) for ing in self.ingredients]	# store ingredients in Ingredient objects
 	
 	
+
+	def print_pretty(self):
+		"""
+		convert representation to easily parseable JSON format
+		"""
+		json = {}
+		ing_list = []
+		for ingredient in self.ingredients:
+			ing_attrs = {}
+			for attr, value in ingredient.__dict__.iteritems():
+				ing_attrs[attr] = value
+			ing_list.append(ing_attrs)
+
+		json['ingredients'] = ing_list
+		return json
+
+
+
+	def parse_instructions(self):
+		"""
+		Look to update ingredients with relavent information found in instructions such as cooking methods and
+		cooking tools
+		"""
+		# for instruction in self.instructions:
+		# 	ingredient = self.find_ingredient(instruction)
+		# 	keywords =
+
+		pass
+
+
+
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
 
@@ -241,6 +278,7 @@ def main():
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
+	print (recipe.print_pretty())
 	# transformations = user_input()
 	# print (transformations)
 
