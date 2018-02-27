@@ -17,37 +17,62 @@ Authors:
 import re
 import requests
 from bs4 import BeautifulSoup
+from nltk import word_tokenize, pos_tag
+ 
 
-DEBUG = False
+DEBUG = True
+
+measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
 
 class Ingredient(object):
 	"""
 	Represents an Ingredient in the recipe. Ingredients have assoiciated quantities, names, measurements, 
-	preperation methods (i.e. finley chopped), and descriptors (i.e. fresh, extra-virgin)
+	preperation methods (i.e. finley chopped), and descriptors (i.e. fresh, extra-virgin). Uses NLTK to tag each word's part 
+	of speach using the pos_tag fuction. From there the module handles extracting out the relavent information and storing it in the appropiate
+	attributes of the object.
+
+	For pos_tag:
+		* ADJ	adjective	new, good, high, special, big, local
+		* ADP	adposition	on, of, at, with, by, into, under
+		* ADV	adverb	really, already, still, early, now
+		* CONJ	conjunction	and, or, but, if, while, although
+		* DET	determiner, article	the, a, some, most, every, no, which
+		* NOUN	noun	year, home, costs, time, Africa
+		* NUM	numeral	twenty-four, fourth, 1991, 14:24
+		* PRT	particle	at, on, out, over per, that, up, with
+		* PRON	pronoun	he, their, her, its, my, I, us
+		* VERB	verb
+		* .	    punctuation marks	. , ; !
+		* X	    other	ersatz, esprit, dunno, gr8, univeristy
 	"""
 	def __init__(self, description):
-		self.name = self.find_name(description)
+		description_tagged = pos_tag(word_tokenize(description))
+
+		# if DEBUG:
+		# 	print ('tags: {}'.format(description_tagged))
+
+		self.name = self.find_name(description_tagged)
 		self.quantity = self.find_quantity(description)
-		self.measurement = self.find_measurement(description)
-		self.descriptor = self.find_descriptor(description)
-		self.preperation = self.find_preperation(description)
+		self.measurement = self.find_measurement(description_tagged)
+		self.descriptor = self.find_descriptor(description_tagged)
+		self.preperation = self.find_preperation(description_tagged)
 
 		if DEBUG:
 			print ('parsing ingredient: {}'.format(description))
 			print ('name: {}'.format(self.name))
 			print ('quantity: {}'.format(self.quantity))
 			print ('measurement: {}'.format(self.measurement))
-			print ('descriptors: {}'.format(self.descriptors))
+			print ('descriptor: {}'.format(self.descriptor))
+			print ('preperation: {}').format(self.preperation)
 		
 
 
 	def find_name(self, description):
 		"""
-		looks for name of the ingredient from the desciption
+		looks for name of the ingredient from the desciption. Finds the nouns that are not measurements
 		"""
-		candidate = description.split(',')[0]
-		name = candidate.split(' ')[-1]
-		return name
+		name = [d[0] for d in description if (d[1] == 'NN' or d[1] == 'NNS') and not re.search(measure_regex, d[0])]
+		return ' '.join(name)
 
 
 	def find_quantity(self, description):
@@ -74,52 +99,34 @@ class Ingredient(object):
 
 	def find_measurement(self, description):
 		"""
-		looks for measurements such as cups, teaspoons, etc.
+		looks for measurements such as cups, teaspoons, etc. 
+		Uses measure_regex which is a compilation of possible measurements.
 		"""
-		words = description.split(' ')
-		prev_numeric = False
-		for word in words:
-			numeric = re.search('[0-9]', word)
-			if numeric:
-				prev_numeric = True
-
-			if not numeric and prev_numeric:
-				return word
-
-		return None
+		measurement = [d[0] for d in description if re.search(measure_regex, d[0])]
+		return measurement
+	
 
 	def find_descriptor(self, description):
 		"""
-		looks for descriptions such as fresh, extra-virgin
+		looks for descriptions such as fresh, extra-virgin by finding describing words such as
+		adjectives
 		"""
-		candidates = []
-		candidate = description.split(',')
-		if len(candidate) > 1:
-			candidates.append(candidate[-1])
-
-		prev_numeric = False
-		idx = 0
-		for i, word in enumerate(candidate[0].split(' ')):
-			numeric = re.search('[0-9]', word)
-			if numeric:
-				prev_numeric = True
-
-			if not numeric and prev_numeric:
-				idx = i
-				break
-		if idx != 0:
-			candidates.extend(candidate[0].split(' ')[idx+1:-1])
-					
-		return candidates
+		# return candidates
+		descriptors = [d[0] for d in description if (d[1] == 'JJ' or d[1] == 'RB') and not re.search(measure_regex, d[0])]
+		return descriptors
 
 
 	def find_preperation(self, description):
 		"""
-		find all preperations (finely, chopped)
+		find all preperations (finely, chopped) by finding action words such as verbs 
 		"""
-		pass
+		# candidates = []
+		# candidate = description.split(',')
+		# if len(candidate) > 1:
+		# 	candidates.append(candidate[-1])
+		preperations = [d[0] for d in description if d[1] == 'VB' or d[1] == 'VBD']
+		return preperations
 
-		
 
 class Recipe(object):
 	"""
@@ -163,8 +170,6 @@ class Recipe(object):
 		pass
 
 
-
-
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
 
 
@@ -193,9 +198,8 @@ def parse_url(url):
 
 	}
 	"""
-
 	# retrieve data from url
-	result = requests.get(url)
+	result = requests.get(url, timeout=10)
 	c = result.content
 
 	# store in BeautifulSoup object to parse HTML DOM
@@ -278,7 +282,9 @@ def main():
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
-	print (recipe.print_pretty())
+
+
+	# print (recipe.print_pretty())
 	# transformations = user_input()
 	# print (transformations)
 

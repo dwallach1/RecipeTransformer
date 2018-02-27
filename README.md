@@ -14,6 +14,7 @@ The program then outputs a JSON representation of the new ingredients and change
 # Dependencies 
 	* Used Python2.7 but works with Python3 as well. 
 	* BeautifulSoup
+	* NLTK
 
 
 # Usage 
