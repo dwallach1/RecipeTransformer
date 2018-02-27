@@ -24,8 +24,9 @@ from nltk import word_tokenize, pos_tag
 DEBUG = False
 
 measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
-tool_indicator_regex = '(large|medium|fry)'
-method_indicator_regex = '(boil)'
+tool_indicator_regex = '(pan |skillet|pot |sheet|grate|whisk)'
+method_indicator_regex = '(boil|bake|simmer|stir)'
+time_indicator_regex = '(min)'
 
 class Ingredient(object):
 	"""
@@ -128,6 +129,58 @@ class Ingredient(object):
 		return preperations
 
 
+
+class Instruction(object):
+	"""
+	Represents an instruction to produce the Recipe. Each instruction has a set of tools used for cooking and set of 
+	methods also used for cooking. There is a time field to denote the amount of time the instruction takes to complete.
+	"""
+	def __init__(self, instruction):
+		instruction = word_tokenize(instruction)
+		self.cooking_tools = self.find_tools(instruction)
+		self.cooking_methods = self.find_methods(instruction)
+		self.time = self.find_time(instruction)
+
+
+	def find_tools(self, instruction):
+		"""
+		looks for any and all cooking tools apparent in the instruction text by using the tool_indicator_regex
+		variable
+		"""
+		cooking_tools = []
+		for i, word in enumerate(instruction):
+			if re.search(tool_indicator_regex, word):
+				cooking_tools.append(instruction[i])
+			
+		return cooking_tools
+
+
+	def find_methods(self, instruction):
+		"""
+		looks for any and all cooking methods apparent in the instruction text by using the method_indicator_regex
+		variable
+		"""
+		cooking_methods = []
+		for i, word in enumerate(instruction):
+			if re.search(method_indicator_regex, word):
+				cooking_methods.append(instruction[i])
+			
+		return cooking_methods
+
+
+	def find_time(self, instruction):
+		"""
+		looks for all time notations apparent in the instruction text by using the time_indicator_regex
+		variable and aggregating the total times using typecasting
+		"""
+		time = 0
+		for i, word in enumerate(instruction):
+			if re.search(time_indicator_regex, word):
+				time += int(instruction[i-1])	
+		return time
+
+
+
 class Recipe(object):
 	"""
 	Used to represent a recipe. Data for each recipe can be found 
@@ -137,30 +190,22 @@ class Recipe(object):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
-		self.ingredients = [Ingredient(ing) for ing in self.ingredients]	# store ingredients in Ingredient objects
-
-		# parse these from instructions
-		self.cooking_tools, self.cooking_methods  = self.parse_instructions()
+		self.ingredients = [Ingredient(ing) for ing in self.ingredients]		# store ingredients in Ingredient objects
+		self.instructions = [Instruction(inst) for inst in self.instructions]	# store instructions in Instruction objects
+		self.cooking_tools, self.cooking_methods  = self.parse_instructions()	# get aggregate tools and methods apparent in all instructions
 	
 
 	def parse_instructions(self):
 		"""
-		Look to update ingredients with relavent information found in instructions such as cooking methods and
-		cooking tools
+		Gathers aggregate data from all instructions to provide overall cooking tools and methods instead of 
+		per instruction basis
 		"""
 		cooking_tools =  []
 		cooking_methods = []
-		for instruction in self.instructions:
-			words = word_tokenize(instruction)
-			for i, w in enumerate(words):
-				if re.search(tool_indicator_regex, w):
-					cooking_tools.append(words[i:i+2])
-				
-				if re.search(method_indicator_regex, w):
-					cooking_methods.append(words[i])
-
-
-		return cooking_tools, cooking_methods
+		for inst in self.instructions:
+			cooking_tools.extend(inst.cooking_tools)
+			cooking_methods.extend(inst.cooking_methods)
+		return list(set(cooking_tools)), list(set(cooking_methods))
 		
 
 	def print_pretty(self):
@@ -314,13 +359,12 @@ def user_input():
 
 
 def main():
-	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
-
-
 	recipe.print_pretty()
 	# transformations = user_input()
 	# print (transformations)
