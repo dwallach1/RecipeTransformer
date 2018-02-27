@@ -15,6 +15,7 @@ The program then outputs a JSON representation of the new ingredients and change
 	* Used Python2.7 but works with Python3 as well. 
 	* BeautifulSoup
 	* NLTK
+	* Requests
 
 
 # Usage 
@@ -33,3 +34,4 @@ recipe_vegan = recipe.to_vegan()
 recipe_vegan.print_pretty()				# print the new recipe 
 
 ```
+
