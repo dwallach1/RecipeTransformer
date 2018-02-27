@@ -25,7 +25,7 @@ The program then outputs a JSON representation of the new ingredients and change
 URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 
 # parse the URL to get relevant information
-recipe_attrs = parse_url(test_url) 		# parse_url returns a dict with data to populate a Recipe object
+recipe_attrs = parse_url(URL) 		# parse_url returns a dict with data to populate a Recipe object
 recipe = Recipe(**recipe_attrs)			# instantiate the Recipe object by unpacking dictionary
 
 # apply a transformation
