@@ -24,7 +24,8 @@ from nltk import word_tokenize, pos_tag
 DEBUG = False
 
 measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
-indicator_regex = '(large|medium|fry)'
+tool_indicator_regex = '(large|medium|fry)'
+method_indicator_regex = '(boil)'
 
 class Ingredient(object):
 	"""
@@ -152,13 +153,15 @@ class Recipe(object):
 		for instruction in self.instructions:
 			words = word_tokenize(instruction)
 			for i, w in enumerate(words):
-				if re.search(indicator_regex, w):
+				if re.search(tool_indicator_regex, w):
 					cooking_tools.append(words[i:i+2])
+				
+				if re.search(method_indicator_regex, w):
+					cooking_methods.append(words[i])
 
 
 		return cooking_tools, cooking_methods
 		
-
 
 	def print_pretty(self):
 		"""
@@ -181,7 +184,28 @@ class Recipe(object):
 		return parsed
 
 
+	def to_vegan(self):
+		"""
+		"""
+		pass
 
+
+	def from_vegan(self):
+		"""
+		"""
+		pass
+
+
+	def to_vegetarian(self):
+		"""
+		"""
+		pass
+
+
+	def from_vegetarian(self):
+		"""
+		"""
+		pass
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
