@@ -15,14 +15,16 @@ Authors:
 
 """
 import re
+import json
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
  
 
-DEBUG = True
+DEBUG = False
 
 measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
+indicator_regex = '(large|medium|fry)'
 
 class Ingredient(object):
 	"""
@@ -52,7 +54,7 @@ class Ingredient(object):
 		# 	print ('tags: {}'.format(description_tagged))
 
 		self.name = self.find_name(description_tagged)
-		self.quantity = self.find_quantity(description)
+		self.quantity = self.find_quantity(description)				# do not use tagged description -- custom parsing for quantities
 		self.measurement = self.find_measurement(description_tagged)
 		self.descriptor = self.find_descriptor(description_tagged)
 		self.preperation = self.find_preperation(description_tagged)
@@ -66,12 +68,13 @@ class Ingredient(object):
 			print ('preperation: {}').format(self.preperation)
 		
 
-
 	def find_name(self, description):
 		"""
 		looks for name of the ingredient from the desciption. Finds the nouns that are not measurements
 		"""
-		name = [d[0] for d in description if (d[1] == 'NN' or d[1] == 'NNS') and not re.search(measure_regex, d[0])]
+		name = [d[0] for d in description if (d[1] == 'NN' or d[1] == 'NNS' or d[1] == 'NNP') and not re.search(measure_regex, d[0])]
+		if len(name) == 0:
+			return description[-1][0]
 		return ' '.join(name)
 
 
@@ -103,7 +106,7 @@ class Ingredient(object):
 		Uses measure_regex which is a compilation of possible measurements.
 		"""
 		measurement = [d[0] for d in description if re.search(measure_regex, d[0])]
-		return measurement
+		return ' '.join(measurement)
 	
 
 	def find_descriptor(self, description):
@@ -120,10 +123,6 @@ class Ingredient(object):
 		"""
 		find all preperations (finely, chopped) by finding action words such as verbs 
 		"""
-		# candidates = []
-		# candidate = description.split(',')
-		# if len(candidate) > 1:
-		# 	candidates.append(candidate[-1])
 		preperations = [d[0] for d in description if d[1] == 'VB' or d[1] == 'VBD']
 		return preperations
 
@@ -138,14 +137,37 @@ class Recipe(object):
 			setattr(self, key, value)
 
 		self.ingredients = [Ingredient(ing) for ing in self.ingredients]	# store ingredients in Ingredient objects
+
+		# parse these from instructions
+		self.cooking_tools, self.cooking_methods  = self.parse_instructions()
 	
-	
+
+	def parse_instructions(self):
+		"""
+		Look to update ingredients with relavent information found in instructions such as cooking methods and
+		cooking tools
+		"""
+		cooking_tools =  []
+		cooking_methods = []
+		for instruction in self.instructions:
+			words = word_tokenize(instruction)
+			for i, w in enumerate(words):
+				if re.search(indicator_regex, w):
+					cooking_tools.append(words[i:i+2])
+
+
+		return cooking_tools, cooking_methods
+		
+
 
 	def print_pretty(self):
 		"""
 		convert representation to easily parseable JSON format
 		"""
-		json = {}
+		data = {}
+		data['name'] = self.name
+		data['cooking tools'] = self.cooking_tools
+		data['cooking method'] = self.cooking_methods
 		ing_list = []
 		for ingredient in self.ingredients:
 			ing_attrs = {}
@@ -153,21 +175,13 @@ class Recipe(object):
 				ing_attrs[attr] = value
 			ing_list.append(ing_attrs)
 
-		json['ingredients'] = ing_list
-		return json
+		data['ingredients'] = ing_list
+		parsed = json.dumps(data, indent=4, sort_keys=True)
+		print (parsed)
+		return parsed
 
 
 
-	def parse_instructions(self):
-		"""
-		Look to update ingredients with relavent information found in instructions such as cooking methods and
-		cooking tools
-		"""
-		# for instruction in self.instructions:
-		# 	ingredient = self.find_ingredient(instruction)
-		# 	keywords =
-
-		pass
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -188,7 +202,7 @@ def parse_url(url):
 		cooktime: int
 		totaltime: int
 		ingredients: list of strings
-		directions: list of strings
+		instructions: list of strings
 		calories: int
 		carbs: int
 		fat: int
@@ -217,8 +231,8 @@ def parse_url(url):
 	# find ingredients
 	ingredients = [i.text for i in soup.find_all('span', {'class': 'recipe-ingred_txt added'})]
 
-	# find directions
-	directions = [i.text for i in soup.find_all('span', {'class': 'recipe-directions__list--item'})] 
+	# find instructions
+	instructions = [i.text for i in soup.find_all('span', {'class': 'recipe-directions__list--item'})] 
 
 
 	# nutrition facts
@@ -234,7 +248,7 @@ def parse_url(url):
 		print ('recipe is called {}'.format(name))
 		print ('prep time is {} minutes, cook time is {} minutes and total time is {} minutes'.format(preptime, cooktime, totaltime))
 		print ('it has {} ingredients'.format(len(ingredients)))
-		print ('it has {} directions'.format(len(directions)))
+		print ('it has {} instructions'.format(len(instructions)))
 		print ('it has {} calories, {} g of carbs, {} g of fat, {} g of protien, {} mg of cholesterol, {} mg of sodium'.format(calories, carbs, fat, protien, cholesterol, sodium))
 
 
@@ -244,7 +258,7 @@ def parse_url(url):
 			'cooktime': cooktime,
 			'totaltime': totaltime,
 			'ingredients': ingredients,
-			'directions': directions,
+			'instructions': instructions,
 			'calories': calories,
 			'carbs': carbs,
 			'fat': fat,
@@ -283,14 +297,10 @@ def main():
 	recipe = Recipe(**recipe_attrs)
 
 
-
-	# print (recipe.print_pretty())
+	recipe.print_pretty()
 	# transformations = user_input()
 	# print (transformations)
 
 
 if __name__ == "__main__":
 	main()
-
-
-
