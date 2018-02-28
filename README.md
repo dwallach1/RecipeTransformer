@@ -35,3 +35,12 @@ recipe_vegan.print_pretty()				# print the new recipe
 
 ```
 
+# Methods
+
+The following are the methods of the Recipe class
+
+* to_vegan() - replaces non-vegan ingredients with vegan substitutes
+* from_vegan() - replaces vegan substitutes with non-vegan ingredients like meat, dairy, ect. 
+* to_vegetarian() - replaces non-vegetarian ingredients with vegan substitutes
+* from_vegetarian() - replaces vegetarian substitutes with non-vegan ingredients like meat, dairy, ect. 
+* to_style(style) - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style
