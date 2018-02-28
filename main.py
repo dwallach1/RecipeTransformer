@@ -16,6 +16,9 @@ Authors:
 """
 import re
 import json
+from urlparse import urlparse
+from collections import defaultdict
+from operator import itemgetter
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
@@ -161,9 +164,12 @@ class Instruction(object):
 		variable
 		"""
 		cooking_methods = []
+		tags = pos_tag(instruction)
 		for i, word in enumerate(instruction):
 			if re.search(method_indicator_regex, word):
 				cooking_methods.append(instruction[i])
+
+		cooking_methods.extend([word[0] for word in tags if word[1] in ['VB', 'VBD']])
 			
 		return cooking_methods
 
@@ -176,7 +182,10 @@ class Instruction(object):
 		time = 0
 		for i, word in enumerate(instruction):
 			if re.search(time_indicator_regex, word):
-				time += int(instruction[i-1])	
+				try:
+					time += int(instruction[i-1])	
+				except:
+					pass
 		return time
 
 
@@ -253,6 +262,53 @@ class Recipe(object):
 		pass
 
 
+	def to_style(self, style):
+		"""
+		search all recipes for mexican recipes and build frequency dictionary and then add ingredients
+		"""
+
+		url = 'https://www.allrecipes.com/search/results/?wt={}&sort=re'.format(style)
+
+		# retrieve data from url
+		result = requests.get(url, timeout=10)
+		c = result.content
+
+		# store in BeautifulSoup object to parse HTML DOM
+		soup = BeautifulSoup(c, "lxml")
+
+		# find all urls that point to recipe pages 
+		recipes = [urlparse(url['href']) for url in soup.find_all('a', href=True)]
+		recipes = [r.geturl() for r in recipes if r.path[1:8] == 'recipe/']		# filter out noise urls 
+		recipes = list(set(recipes))
+
+		# parse the urls and create new Recipe objects
+		recipes = [Recipe(**parse_url(recipe)) for recipe in recipes]
+		print ('found {} recipes cooked {} style'.format(len(recipes), style))
+
+		ingredients_ = [recipe.ingredients for recipe in recipes]
+		ingredients = []
+		for ingredient in ingredients_:
+			ingredients.extend(ingredient)
+		
+		ingredients = [ingredient.name for ingredient in ingredients]
+
+		key_ingredients = self.freq_dist(ingredients)
+		key_ingredients = sorted(key_ingredients.items(), key=itemgetter(1))
+		# print (key_ingredients)
+
+
+	def freq_dist(self, data):
+		"""
+		"""
+		freqs = defaultdict(lambda: 0)
+		for d in data:
+			d = d.split(' ')
+			for w in d:
+				freqs[w] += 1
+
+		return freqs
+
+
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
 
 
@@ -294,7 +350,9 @@ def parse_url(url):
 	
 	# find relavent time information
 	preptime  = remove_non_numerics(soup.find('time', {'itemprop': 'prepTime'}).text)
-	cooktime  = remove_non_numerics(soup.find('time', {'itemprop': 'cookTime'}).text)
+	# some recipes do not have cook times 
+	try: cooktime  = remove_non_numerics(soup.find('time', {'itemprop': 'cookTime'}).text)
+	except: cooktime = 0
 	totaltime = remove_non_numerics(soup.find('time', {'itemprop': 'totalTime'}).text)
 	
 	# find ingredients
@@ -359,13 +417,17 @@ def user_input():
 
 
 def main():
-	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
-	recipe.print_pretty()
+
+	recipe.to_style('mexican')
+	# recipe.print_pretty()
+
+
 	# transformations = user_input()
 	# print (transformations)
 
