@@ -293,12 +293,12 @@ class Recipe(object):
 		ingredients = [ingredient.name for ingredient in ingredients]
 
 		key_ingredients = self.freq_dist(ingredients)
-		key_ingredients = sorted(key_ingredients.items(), key=itemgetter(1))
 		# print (key_ingredients)
 
 
 	def freq_dist(self, data):
 		"""
+		builds a frequncy distrobution dictionary sorted by the most commonly occuring words 
 		"""
 		freqs = defaultdict(lambda: 0)
 		for d in data:
@@ -306,7 +306,7 @@ class Recipe(object):
 			for w in d:
 				freqs[w] += 1
 
-		return freqs
+		return sorted(key_ingredients.items(), key=itemgetter(1), reverse=True)
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -417,6 +417,10 @@ def user_input():
 
 
 def main():
+
+	# url = raw_input('Enter a url from allrecipes.com: ')
+
+	
 	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
