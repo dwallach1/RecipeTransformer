@@ -31,6 +31,40 @@ tool_indicator_regex = '(pan |skillet|pot |sheet|grate|whisk)'
 method_indicator_regex = '(boil|bake|simmer|stir)'
 time_indicator_regex = '(min)'
 
+
+import sys
+import time
+import threading
+
+class Spinner(object):
+    busy = False
+    delay = 0.1
+
+    @staticmethod
+    def spinning_cursor():
+        while 1: 
+            for cursor in '|/-\\': yield cursor
+
+    def __init__(self, delay=None):
+        self.spinner_generator = self.spinning_cursor()
+        if delay and float(delay): self.delay = delay
+
+    def spinner_task(self):
+        while self.busy:
+            sys.stdout.write(next(self.spinner_generator))
+            sys.stdout.flush()
+            time.sleep(self.delay)
+            sys.stdout.write('\b')
+            sys.stdout.flush()
+
+    def start(self):
+        self.busy = True
+        threading.Thread(target=self.spinner_task).start()
+
+    def stop(self):
+        self.busy = False
+        time.sleep(self.delay)
+
 class Ingredient(object):
 	"""
 	Represents an Ingredient in the recipe. Ingredients have assoiciated quantities, names, measurements, 
@@ -139,10 +173,11 @@ class Instruction(object):
 	methods also used for cooking. There is a time field to denote the amount of time the instruction takes to complete.
 	"""
 	def __init__(self, instruction):
-		instruction = word_tokenize(instruction)
-		self.cooking_tools = self.find_tools(instruction)
-		self.cooking_methods = self.find_methods(instruction)
-		self.time = self.find_time(instruction)
+		self.instruction = instruction
+		instruction_words = word_tokenize(instruction)
+		self.cooking_tools = self.find_tools(instruction_words)
+		self.cooking_methods = self.find_methods(instruction_words)
+		self.time = self.find_time(instruction_words)
 
 
 	def find_tools(self, instruction):
@@ -264,7 +299,8 @@ class Recipe(object):
 
 	def to_style(self, style):
 		"""
-		search all recipes for mexican recipes and build frequency dictionary and then add ingredients
+		search all recipes for recipes pertaining to the 'style' parameter and builds frequency dictionary.
+		Then adds/removes/augemnets ingredients to make it more like the 'style' of cuisine. 
 		"""
 
 		url = 'https://www.allrecipes.com/search/results/?wt={}&sort=re'.format(style)
@@ -277,24 +313,54 @@ class Recipe(object):
 		soup = BeautifulSoup(c, "lxml")
 
 		# find all urls that point to recipe pages 
-		recipes = [urlparse(url['href']) for url in soup.find_all('a', href=True)]
-		recipes = [r.geturl() for r in recipes if r.path[1:8] == 'recipe/']		# filter out noise urls 
-		recipes = list(set(recipes))
+		style_recipes = [urlparse(url['href']) for url in soup.find_all('a', href=True)]
+		style_recipes = [r.geturl() for r in style_recipes if r.path[1:8] == 'recipe/']		# filter out noise urls 
+		style_recipes = list(set(style_recipes))
 
 		# parse the urls and create new Recipe objects
-		recipes = [Recipe(**parse_url(recipe)) for recipe in recipes]
-		print ('found {} recipes cooked {} style'.format(len(recipes), style))
+		style_recipes = [Recipe(**parse_url(recipe)) for recipe in style_recipes]
+		print ('found {} recipes cooked {} style'.format(len(style_recipes), style))
 
-		ingredients_ = [recipe.ingredients for recipe in recipes]
+
+		ingredients_ = [recipe.ingredients for recipe in style_recipes]
 		ingredients = []
 		for ingredient in ingredients_:
 			ingredients.extend(ingredient)
+	
+		ingredient_names = [ingredient.name for ingredient in ingredients]
+
+		# extract only the names and not the freqs -- will be sorted in decreasing order
+		key_new_ingredients = [freq[0] for freq in self.freq_dist(ingredient_names)][:15]
+		print ('key ingredients are {}'.format(key_new_ingredients))
+
+		current_ingredient_names = [ingredient.name for ingredient in self.ingredients]
+		print ('current ingredients are {}'.format(current_ingredient_names))
+
+		# get the whole ingredient objects -- this is to change actions accorgingly
+		# e.g. if we switch from pinches of salt to lemon, we need to change pinches to squeezes
+		ingredient_changes = [ingredient for ingredient in ingredients if ingredient.name in key_new_ingredients]
+
+
+		# MUST SWITCH INGREDIENTS HERE FOR BELOW TO WORK
+		# change_ingredient_dict = {}
+		# for ingredient in ingredient_changes:
+		# 	change_measurment_dict[current_ingredient] = ingredient
+
+
+		# # map old words to new changes
+		# change_measurment_dict = {}
+		# for ingredient in ingredient_changes:
+		# 	change_measurment_dict[ingredient.name] = ingredient.measurement
+
+		# for instruction in self.instructions:
+		# 	new_words = []
+		# 	for word in instruction.instruction.split(' '):
+		# 		if word in change_measurment_dict.keys():
+		# 			word = change_measurment_dict[word]
+		# 		new_words.append(word)
+		# 	instruction.instruction = ' '.join(new_words)
+
 		
-		ingredients = [ingredient.name for ingredient in ingredients]
-
-		key_ingredients = self.freq_dist(ingredients)
-		# print (key_ingredients)
-
 
 	def freq_dist(self, data):
 		"""
@@ -302,11 +368,8 @@ class Recipe(object):
 		"""
 		freqs = defaultdict(lambda: 0)
 		for d in data:
-			d = d.split(' ')
-			for w in d:
-				freqs[w] += 1
-
-		return sorted(key_ingredients.items(), key=itemgetter(1), reverse=True)
+			freqs[d] += 1
+		return sorted(freqs.items(), key=itemgetter(1), reverse=True)
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -395,46 +458,24 @@ def parse_url(url):
 			}
 
 
-def user_input():
-	"""
-	Asks user what kind of transformations they would like to perform
-	"""
-	options = ['To vegetarian? (y/n) ', 'From vegetarian? (y/n) ', 'To healthy? (y/n) ', 'From healthy? (y/n) ']
-	responses = []
-	d = {'y': 1, 'n': 0}
-	answered = False
-	for opt in options:
-		while not answered:
-			try:
-				ans = d[raw_input(opt)]
-			except KeyError:
-				continue
-			else:
-				answered = True
-				responses.append(ans)
-		answered = False
-	return responses
-
-
 def main():
-
-	# url = raw_input('Enter a url from allrecipes.com: ')
-
-	
-	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	"""
+	main function -- runs all initalization and any methods user wants 
+	"""
+	spinner = Spinner()
+	spinner.start()
+	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
+	# recipe.to_style('thai')
 	recipe.to_style('mexican')
 	# recipe.print_pretty()
 
-
-	# transformations = user_input()
-	# print (transformations)
-
+	spinner.stop()
 
 if __name__ == "__main__":
 	main()
