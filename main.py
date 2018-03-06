@@ -22,6 +22,7 @@ from operator import itemgetter
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
+import textwrap
  
 
 DEBUG = False
@@ -30,6 +31,11 @@ measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
 tool_indicator_regex = '(pan |skillet|pot |sheet|grate|whisk)'
 method_indicator_regex = '(boil|bake|simmer|stir)'
 time_indicator_regex = '(min)'
+
+meats_regex = '(beef|steak|chicken|pork|bacon|fish|salmon|tuna|sausage)( (chop|steak|breast))?'
+meat_sauces_regex = '(fish) (sauce)'
+meat_stocks_regex = '(fish|chicken) (stock|broth)'
+heat_method_indicator_regex = ('boil|bake|simmer|stir')
 
 class Ingredient(object):
 	"""
@@ -129,6 +135,9 @@ class Ingredient(object):
 		find all preperations (finely, chopped) by finding action words such as verbs 
 		"""
 		preperations = [d[0] for d in description if d[1] == 'VB' or d[1] == 'VBD']
+		for i, p in enumerate(preperations):
+			if p == 'taste':
+				preperations[i] = 'to taste'
 		return preperations
 
 
@@ -199,6 +208,8 @@ class Recipe(object):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 
+		self.text_instructions = self.instructions;		# store the original instructions, 
+														# idea for right now is to modify the original instructions for transformations
 		self.ingredients = [Ingredient(ing) for ing in self.ingredients]		# store ingredients in Ingredient objects
 		self.instructions = [Instruction(inst) for inst in self.instructions]	# store instructions in Instruction objects
 		self.cooking_tools, self.cooking_methods  = self.parse_instructions()	# get aggregate tools and methods apparent in all instructions
@@ -238,6 +249,38 @@ class Recipe(object):
 		return parsed
 
 
+	def print_recipe(self):
+		"""
+		print a human friendly version of the recipe
+		"""
+		print('\nIngredients List:')
+		for ing in self.ingredients:			
+			# only add quantity, measurement, descriptor, and preperation if we have them
+			quant = ''
+			if ing.quantity != 0:
+				quant = "{} ".format(round(ing.quantity, 2) if ing.quantity % 1 else int(ing.quantity))
+
+			measure = ''
+			if ing.measurement != "":
+				measure = ing.measurement + ' '
+
+			descr = ''
+			if len(ing.descriptor) > 0:
+				descr = ' '.join(ing.descriptor) + ' '
+			
+			prep = ''
+			if len(ing.preperation) > 0:
+				prep = ', ' + ' and '.join(ing.preperation)
+			
+			full_ing = '{}{}{}{}{}'.format(quant, measure, descr, ing.name, prep)
+
+			print(full_ing)
+
+		print('\nInstructions:')
+		for i, t_inst in enumerate(self.text_instructions[:-1]):
+			print(textwrap.fill('{}. {}'.format(i+1, t_inst), 80))
+
+
 	def to_vegan(self):
 		"""
 		"""
@@ -252,14 +295,63 @@ class Recipe(object):
 
 	def to_vegetarian(self):
 		"""
+		Replaces meat or seafood ingredients with vegetarian alternatives. Directly replaces 
+		each ingredient without changing the actual cooking style. 
 		"""
-		pass
+		for ing in self.ingredients:
+			meat_match = re.search(meats_regex, ing.name, re.I)
+
+			# replace any meat stocks with veggie stocks, fish sauce with soy sauce, and 
+			# meat with some amount of tofu
+			if re.search(meat_stocks_regex, ing.name, re.I):
+				for i, inst in enumerate(self.text_instructions):
+					self.text_instructions[i] = re.sub(meat_stocks_regex, r'vegetable \2', inst)
+				ing.name = re.sub(meat_stocks_regex, r'vegetable \2', ing.name)
+
+			elif re.search(meat_sauces_regex, ing.name, re.I):
+				for i, inst in enumerate(self.text_instructions):
+					self.text_instructions[i] = re.sub(meat_sauces_regex, r'soy \2', inst)
+				ing.name = re.sub(meat_stocks_regex, r'soy \2', ing.name)
+
+			elif meat_match:
+				meat_ing = meat_match.group(0)
+				print meat_ing
+				for i, inst in enumerate(self.text_instructions):
+					self.text_instructions[i] = re.sub(meat_ing, 'tofu', inst)
+
+				ing.name = 'tofu'
+				ing.descriptor = []
+				ing.preperation = []
+
+				if 'ounce' in ing.measurement:
+					pass
+				elif re.search('pounds?\s', ing.measurement):
+					ing.quantity /= 16.
+				elif self.protien:
+					ing.quantity = float(self.protien) / 4.
+				else:
+					ing.quantity = 8 
+
+				ing.measurement = 'ounce' if ing.quantity == 1 else 'ounces'
+
+		# remove any meat terms we missed and 'tofus' artifacts
+		for i, inst in enumerate(self.text_instructions):
+			new_inst = re.sub(meats_regex, 'tofu', inst)
+			self.text_instructions[i] = re.sub('tofus', 'tofu', new_inst)
 
 
 	def from_vegetarian(self):
 		"""
+		Adds chicken to the recipe
 		"""
-		pass
+		self.ingredients.append(Ingredient('4 skinless, boneless chicken breast halves'))
+
+		boiling_chicken = 'Place the chicken breasts in a non-stick pan and fill the pan with water until the breasts are covered.' \
+		+ ' Simmer uncovered for 5 minutes.' \
+		+ ' Then, turn off the heat and cover for 15 minutes. Remove the breasts and set aside.'
+		adding_chicken = 'Shred the chicken breasts by pulling the meat apart into thin slices by hand. Stir in the shredded chicken.'
+		self.text_instructions.insert(0, boiling_chicken)
+		self.text_instructions.insert(-1, adding_chicken)
 
 
 	def to_style(self, style):
@@ -306,7 +398,7 @@ class Recipe(object):
 			for w in d:
 				freqs[w] += 1
 
-		return sorted(key_ingredients.items(), key=itemgetter(1), reverse=True)
+		return sorted(freqs.items(), key=itemgetter(1), reverse=True)
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -349,11 +441,13 @@ def parse_url(url):
 	name = soup.find('h1', {'itemprop': 'name'}).text
 	
 	# find relavent time information
-	preptime  = remove_non_numerics(soup.find('time', {'itemprop': 'prepTime'}).text)
-	# some recipes do not have cook times 
+	# some recipes are missing some of the times 
+	try: preptime  = remove_non_numerics(soup.find('time', {'itemprop': 'prepTime'}).text)
+	except: preptime = 0
 	try: cooktime  = remove_non_numerics(soup.find('time', {'itemprop': 'cookTime'}).text)
 	except: cooktime = 0
-	totaltime = remove_non_numerics(soup.find('time', {'itemprop': 'totalTime'}).text)
+	try: totaltime = remove_non_numerics(soup.find('time', {'itemprop': 'totalTime'}).text)
+	except: totaltime = 0
 	
 	# find ingredients
 	ingredients = [i.text for i in soup.find_all('span', {'class': 'recipe-ingred_txt added'})]
@@ -430,7 +524,9 @@ def main():
 
 	recipe.to_style('mexican')
 	# recipe.print_pretty()
-
+	
+	# recipe.to_vegetarian()
+	# recipe.print_recipe()
 
 	# transformations = user_input()
 	# print (transformations)
