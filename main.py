@@ -14,10 +14,7 @@ Authors:
  	* David Wallach
 
 """
-import sys
 import time
-import threading
-
 import re
 import json
 from urlparse import urlparse
@@ -41,36 +38,12 @@ meat_stocks_regex = '(fish|chicken) (stock|broth)'
 heat_method_indicator_regex = ('boil|bake|simmer|stir')
 
 
+# build these regexs dynamically from wikipedia using the build_fetched_regexs() function
+# these can be used to tag the domain of an ingredient -- used in to_style method of Recipe class 
+sauce_regex = []
+vegetable_regex = []
+herbs_spice_regex = []
 
-
-class Spinner(object):
-    busy = False
-    delay = 0.1
-
-    @staticmethod
-    def spinning_cursor():
-        while 1: 
-            for cursor in '|/-\\': yield cursor
-
-    def __init__(self, delay=None):
-        self.spinner_generator = self.spinning_cursor()
-        if delay and float(delay): self.delay = delay
-
-    def spinner_task(self):
-        while self.busy:
-            sys.stdout.write(next(self.spinner_generator))
-            sys.stdout.flush()
-            time.sleep(self.delay)
-            sys.stdout.write('\b')
-            sys.stdout.flush()
-
-    def start(self):
-        self.busy = True
-        threading.Thread(target=self.spinner_task).start()
-
-    def stop(self):
-        self.busy = False
-        time.sleep(self.delay)
 
 
 class Ingredient(object):
@@ -177,7 +150,6 @@ class Ingredient(object):
 		return preperations
 
 
-
 class Instruction(object):
 	"""
 	Represents an instruction to produce the Recipe. Each instruction has a set of tools used for cooking and set of 
@@ -233,7 +205,6 @@ class Instruction(object):
 				except:
 					pass
 		return time
-
 
 
 class Recipe(object):
@@ -318,13 +289,13 @@ class Recipe(object):
 			print(textwrap.fill('{}. {}'.format(i+1, t_inst), 80))
 
 
-	def to_vegan(self):
+	def to_healthy(self):
 		"""
 		"""
 		pass
 
 
-	def from_vegan(self):
+	def from_healthy(self):
 		"""
 		"""
 		pass
@@ -407,28 +378,33 @@ class Recipe(object):
 		soup = BeautifulSoup(c, "lxml")
 
 		# find all urls that point to recipe pages 
-		style_recipes = [urlparse(url['href']) for url in soup.find_all('a', href=True)]
+		style_recipes = [urlparse(url['href']) for url in soup.find_all('a', href=True)]	# find all urls in HTML DOM
 		style_recipes = [r.geturl() for r in style_recipes if r.path[1:8] == 'recipe/']		# filter out noise urls 
-		style_recipes = list(set(style_recipes))
+		style_recipes = list(set(style_recipes))											# don't double count urls 
 
 		# parse the urls and create new Recipe objects
-		style_recipes = [Recipe(**parse_url(recipe)) for recipe in style_recipes]
+		style_recipes = [Recipe(**parse_url(recipe)) for recipe in style_recipes]	# instantiate all recipe objects for each found recipe
 		print ('found {} recipes cooked {} style'.format(len(style_recipes), style))
 
-
+		# unpack all ingredients in total set of new recipes of type 'style'
 		ingredients_ = [recipe.ingredients for recipe in style_recipes]
 		ingredients = []
 		for ingredient in ingredients_:
 			ingredients.extend(ingredient)
-	
+		
+		# hold reference to just the ingredient names for frequency distrobutions
 		ingredient_names = [ingredient.name for ingredient in ingredients]
 
-		# extract only the names and not the freqs -- will be sorted in decreasing order
-		key_new_ingredients = [freq[0] for freq in self.freq_dist(ingredient_names)][:15]
-		print ('key ingredients are {}'.format(key_new_ingredients))
-
+		# hold reference to ingredients from original recipe
 		current_ingredient_names = [ingredient.name for ingredient in self.ingredients]
-		print ('current ingredients are {}'.format(current_ingredient_names))
+		print ('current ingredients from original recipe are {}'.format(current_ingredient_names))
+
+		# extract only the names and not the freqs -- will be sorted in decreasing order
+		key_new_ingredients = [freq[0] for freq in self.freq_dist(ingredient_names)]
+		# remove the ingredients that are already in there
+		key_new_ingredients = [ingredient for ingredient in key_new_ingredients if not(ingredient in current_ingredient_names)][:10]
+		print ('key ingredients from {} recipes found are {}'.format(style, key_new_ingredients))
+
 
 		# get the whole ingredient objects -- this is to change actions accorgingly
 		# e.g. if we switch from pinches of salt to lemon, we need to change pinches to squeezes
@@ -455,7 +431,6 @@ class Recipe(object):
 		# 	instruction.instruction = ' '.join(new_words)
 
 		
-
 	def freq_dist(self, data):
 		"""
 		builds a frequncy distrobution dictionary sorted by the most commonly occuring words 
@@ -464,6 +439,11 @@ class Recipe(object):
 		for d in data:
 			freqs[d] += 1
 		return sorted(freqs.items(), key=itemgetter(1), reverse=True)
+
+
+	def similar_ingredients(self, ingredient1, ingredient2):
+		"""
+		"""
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -554,12 +534,108 @@ def parse_url(url):
 			}
 
 
+def build_fetched_regexs():
+	"""
+	"""
+	global vegetable_regex
+	global sauce_regex
+	global herbs_spice_regex
+
+	# build vegetable regex
+	url = 'https://simple.wikipedia.org/wiki/List_of_vegetables'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	lis = [li.text.strip() for li in soup.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if li == 'Lists of vegetables': break
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		lis_clean.append(li.lower())
+	# print (lis_clean)
+	# vegetable_regex = '(' + '|'.join(lis_clean) + ')'
+	vegetable_regex = lis_clean
+
+	# build herbs and spices regex
+	url = 'https://en.wikipedia.org/wiki/List_of_culinary_herbs_and_spices'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	lis = [li.text.strip() for li in soup.find_all('li')][3:]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		if li == 'Category': break
+		lis_clean.append(li.lower())
+	# print (lis_clean)
+	# herbs_spice_regex = '(' + '|'.join(lis_clean) + ')'
+	herbs_spice_regex = lis_clean
+
+
+	# build sauces regex
+	url = 'https://en.wikipedia.org/wiki/List_of_sauces'
+
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	lis = [li.text.strip() for li in soup.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		if li == 'Category': break
+		lis_clean.append(li.lower())
+	# print (lis_clean)
+	# sauce_regex = '(' + '|'.join(lis_clean) + ')'
+	# print (sauce_regex)
+	sauce_regex = lis_clean
+
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        if 'log_time' in kw:
+            name = kw.get('log_name', method.__name__.upper())
+            kw['log_time'][name] = int((te - ts) * 1000)
+        else:
+            print '%r  %2.2f ms' % \
+                  (method.__name__, (te - ts) * 1000)
+        return result
+    return timed
+
+
+@timeit
 def main():
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
-	spinner = Spinner()
-	spinner.start()
+	build_fetched_regexs()
+
+	# vegetable = 'tomato'
+	# print ('{} is a vegetable --> {}'.format(vegetable, any(vegetable in test.split(' ') for test in vegetable_regex)))
+
+	# sauce = 'pesto'
+	# print ('{} is a sauce --> {}'.format(sauce, any(sauce in test.split(' ') for test in sauce_regex)))
+
+	# herb = 'oregano'
+	# print ('{} is a herb/spice --> {}'.format(herb, any(herb in test.split(' ') for test in herbs_spice_regex)))
+
 	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
@@ -567,12 +643,10 @@ def main():
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
-	# recipe.to_style('thai')
+	# # recipe.to_style('thai')
 	recipe.to_style('mexican')
-	# recipe.print_pretty()
+	# # recipe.print_pretty()
 
-
-	spinner.stop()
 
 
 if __name__ == "__main__":
