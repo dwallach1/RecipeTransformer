@@ -38,13 +38,14 @@ meat_stocks_regex = '(fish|chicken) (stock|broth)'
 heat_method_indicator_regex = ('boil|bake|simmer|stir')
 
 
-# build these regexs dynamically from wikipedia using the build_fetched_regexs() function
+# build these regexs dynamically from wikipedia using the build_dynamix_lists() function
 # these can be used to tag the domain of an ingredient -- used in to_style method of Recipe class 
-sauce_regex = []
-vegetable_regex = []
-herbs_spice_regex = []
-
-
+sauce_list = []
+vegetable_list = []
+herbs_spice_list = []
+dairy_list = []
+meat_list = []
+grain_list = []
 
 class Ingredient(object):
 	"""
@@ -78,6 +79,7 @@ class Ingredient(object):
 		self.measurement = self.find_measurement(description_tagged)
 		self.descriptor = self.find_descriptor(description_tagged)
 		self.preperation = self.find_preperation(description_tagged)
+		self.type = self.find_type()
 
 		if DEBUG:
 			print ('parsing ingredient: {}'.format(description))
@@ -148,6 +150,26 @@ class Ingredient(object):
 			if p == 'taste':
 				preperations[i] = 'to taste'
 		return preperations
+
+
+	def find_type(self):
+		"""
+		attempts to categorize ingredient for Recipe methods to work more smoothly and correctly
+
+		* H --> Herbs / Spices
+		* V --> Vegetable 
+		* M --> Meat
+		* D --> Dairy
+		* ? --> Misc. 
+		"""
+		types = []
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in herbs_spice_list): types.append('H')
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in vegetable_list): types.append('V')
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in meat_list): types.append('M')
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in dairy_list): types.append('D') 
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in grain_list): types.append('G') 
+		if len(types) == 0: types.append('?') 
+		return types
 
 
 class Instruction(object):
@@ -534,14 +556,18 @@ def parse_url(url):
 			}
 
 
-def build_fetched_regexs():
+def build_dynamic_lists():
 	"""
+	fills the lists of known foods from websites -- used to tag ingredients 
 	"""
-	global vegetable_regex
-	global sauce_regex
-	global herbs_spice_regex
+	global vegetable_list
+	global sauce_list
+	global herbs_spice_list
+	global dairy_list
+	global meat_list
+	global grain_list
 
-	# build vegetable regex
+	# build vegetable list
 	url = 'https://simple.wikipedia.org/wiki/List_of_vegetables'
 	result = requests.get(url, timeout=10)
 	c = result.content
@@ -557,11 +583,10 @@ def build_fetched_regexs():
 		if re.search('\d', li): continue
 		if re.search('\n', li): continue
 		lis_clean.append(li.lower())
-	# print (lis_clean)
-	# vegetable_regex = '(' + '|'.join(lis_clean) + ')'
-	vegetable_regex = lis_clean
+	vegetable_list = lis_clean
 
-	# build herbs and spices regex
+
+	# build herbs and spices list
 	url = 'https://en.wikipedia.org/wiki/List_of_culinary_herbs_and_spices'
 	result = requests.get(url, timeout=10)
 	c = result.content
@@ -577,14 +602,11 @@ def build_fetched_regexs():
 		if re.search('\n', li): continue
 		if li == 'Category': break
 		lis_clean.append(li.lower())
-	# print (lis_clean)
-	# herbs_spice_regex = '(' + '|'.join(lis_clean) + ')'
-	herbs_spice_regex = lis_clean
+	herbs_spice_list = lis_clean
 
 
-	# build sauces regex
+	# build sauces list
 	url = 'https://en.wikipedia.org/wiki/List_of_sauces'
-
 	result = requests.get(url, timeout=10)
 	c = result.content
 
@@ -599,10 +621,63 @@ def build_fetched_regexs():
 		if re.search('\n', li): continue
 		if li == 'Category': break
 		lis_clean.append(li.lower())
-	# print (lis_clean)
-	# sauce_regex = '(' + '|'.join(lis_clean) + ')'
-	# print (sauce_regex)
-	sauce_regex = lis_clean
+	sauce_list = lis_clean
+
+
+	# build meat list
+	url = 'http://naturalhealthtechniques.com/list-of-meats-and-poultry/'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	div = soup.find('div', {'class': 'entry-content'})
+	lis = [li.text.strip() for li in div.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		lis_clean.append(li.lower())
+	meat_list = lis_clean
+
+
+	# build dairy list
+	url = 'http://naturalhealthtechniques.com/list-of-cheese-dairy-products/'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	div = soup.find('div', {'class': 'entry-content'})
+	lis = [li.text.strip() for li in div.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		lis_clean.append(li.lower())
+	dairy_list = lis_clean
+
+
+	url = 'http://naturalhealthtechniques.com/list-of-grains-cereals-pastas-flours/'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	div = soup.find('div', {'class': 'entry-content'})
+	lis = [li.text.strip() for li in div.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		lis_clean.append(li.lower())
+	grain_list = lis_clean
 
 
 def timeit(method):
@@ -612,10 +687,10 @@ def timeit(method):
         te = time.time()
         if 'log_time' in kw:
             name = kw.get('log_name', method.__name__.upper())
-            kw['log_time'][name] = int((te - ts) * 1000)
+            kw['log_time'][name] = int((te - ts) * 100)
         else:
-            print '%r  %2.2f ms' % \
-                  (method.__name__, (te - ts) * 1000)
+            print '%r  %2.2f s' % \
+                  (method.__name__, (te - ts) * 100)
         return result
     return timed
 
@@ -625,27 +700,31 @@ def main():
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
-	build_fetched_regexs()
+	build_dynamic_lists()
 
-	# vegetable = 'tomato'
-	# print ('{} is a vegetable --> {}'.format(vegetable, any(vegetable in test.split(' ') for test in vegetable_regex)))
-
-	# sauce = 'pesto'
-	# print ('{} is a sauce --> {}'.format(sauce, any(sauce in test.split(' ') for test in sauce_regex)))
-
-	# herb = 'oregano'
-	# print ('{} is a herb/spice --> {}'.format(herb, any(herb in test.split(' ') for test in herbs_spice_regex)))
-
-	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
 	# # recipe.to_style('thai')
-	recipe.to_style('mexican')
-	# # recipe.print_pretty()
+	# recipe.to_style('mexican')
+	recipe.print_pretty()
+
+
+
+
+
+	# vegetable = 'tomato'
+	# print ('{} is a vegetable --> {}'.format(vegetable, any(vegetable in test.split(' ') for test in vegetable_list)))
+
+	# sauce = 'pesto'
+	# print ('{} is a sauce --> {}'.format(sauce, any(sauce in test.split(' ') for test in sauce_list)))
+
+	# herb = 'oregano'
+	# print ('{} is a herb/spice --> {}'.format(herb, any(herb in test.split(' ') for test in herbs_spice_list)))
 
 
 
