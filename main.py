@@ -91,7 +91,25 @@ class Ingredient(object):
 			print ('measurement: {}'.format(self.measurement))
 			print ('descriptor: {}'.format(self.descriptor))
 			print ('preperation: {}').format(self.preperation)
-		
+	
+
+	def __str__(self):
+		"""
+		"""
+		return self.name
+
+
+	def __repr__(self):
+		"""
+		"""
+		return self.name
+
+
+	def __eq__(self, other):
+	    if isinstance(self, other.__class__):
+	        return self.__dict__ == other.__dict__
+	    return False
+
 
 	def find_name(self, description):
 		"""
@@ -292,6 +310,14 @@ class Recipe(object):
 		return parsed
 
 
+	def compare_to_original(self):
+		print ('-----------------------')
+		for i in range(len(self.original_recipe.ingredients)):
+			if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
+				print ('{} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
+		print ('-----------------------')
+
+
 	def print_recipe(self):
 		"""
 		print a human friendly version of the recipe
@@ -397,7 +423,7 @@ class Recipe(object):
 		self.text_instructions.insert(-1, adding_chicken)
 
 
-	def to_style(self, style, threshold=0.9):
+	def to_style(self, style, threshold=1.0):
 		"""
 		search all recipes for recipes pertaining to the 'style' parameter and builds frequency dictionary.
 		Then adds/removes/augemnets ingredients to make it more like the 'style' of cuisine. 
@@ -466,18 +492,6 @@ class Recipe(object):
 		del new
 		del tmp
 
-		print ('--------------------------------')
-		print ('current ingredients')
-		print ('--------------------------------')
-		for ingredient in self.ingredients:
-			print ('{} --> {}'.format(ingredient.name, ingredient.type))
-
-		print ('--------------------------------')
-		print ('new (possible) ingredients')
-		print ('--------------------------------')
-		for ingredient in ingredient_changes:
-			print ('{} --> {}'.format(ingredient.name, ingredient.type))
-
 
 		# Find out most common ingredients from all recipes of type 'style' -- then decide which to switch and/or add to current recipe
 		try: most_common_sauce = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'S')
@@ -496,29 +510,31 @@ class Recipe(object):
 		except StopIteration: most_common_fruit = None
 		
 		
-		if most_common_sauce: print ('most_common_sauce: {}'.format(most_common_sauce.name))
-		if most_common_meat: print ('most_common_meat: {}'.format(most_common_meat.name))
-		if most_common_fruit: print ('most_common_fruit: {}'.format(most_common_fruit.name))
-		if most_common_herb: print ('most_common_herb: {}'.format(most_common_herb.name))
-		if most_common_vegetable: print ('most_common_vegetable: {}'.format(most_common_vegetable.name))
-		if most_common_grain: print ('most_common_grain: {}'.format(most_common_grain.name))
-		if most_common_dairy: print ('most_common_dairy: {}'.format(most_common_dairy.name))
+		# if most_common_sauce: print ('most_common_sauce: {}'.format(most_common_sauce.name))
+		# if most_common_meat: print ('most_common_meat: {}'.format(most_common_meat.name))
+		# if most_common_fruit: print ('most_common_fruit: {}'.format(most_common_fruit.name))
+		# if most_common_herb: print ('most_common_herb: {}'.format(most_common_herb.name))
+		# if most_common_vegetable: print ('most_common_vegetable: {}'.format(most_common_vegetable.name))
+		# if most_common_grain: print ('most_common_grain: {}'.format(most_common_grain.name))
+		# if most_common_dairy: print ('most_common_dairy: {}'.format(most_common_dairy.name))
 
 		# switch the ingredients
 		most_commons = filter(lambda mc: mc != None, 
-					[most_common_meat, most_common_vegetable, most_common_sauce, most_common_grain, most_common_herb, most_common_dairy, most_common_fruit])
+					[most_common_meat, most_common_vegetable, most_common_sauce, most_common_grain, 
+					 most_common_herb, most_common_dairy, most_common_fruit])
 
 		try: most_commons = most_commons[:int(7*threshold)]
-		except: pass
+		except: pass # this means we didnt find enough to choose -- just keep whole list b/c under threshold anyways
 
-		print ('most commons {}'.format([m.name for m in most_commons]))
+		# print ('most commons {}'.format([m.name for m in most_commons]))
 
 
-		# update the instructions
+		for new_ingredient in most_commons:
+			try: current_ingredient = next(ingredient for ingredient in self.ingredients if ingredient.type == new_ingredient.type)
+			except StopIteration: continue
+			self.swap_ingredients(current_ingredient, new_ingredient)
 
-		# change the time if necessary
 
-		
 	def freq_dist(self, data):
 		"""
 		builds a frequncy distrobution dictionary sorted by the most commonly occuring words 
@@ -529,11 +545,20 @@ class Recipe(object):
 		return sorted(freqs.items(), key=itemgetter(1), reverse=True)
 
 
-	def similar_ingredients(self, ingredient1, ingredient2):
+	def swap_ingredients(self, current_ingredient, new_ingredient):
 		"""
-		checks if the ingredients are of a simialar type
+		replaces the current_ingredient with the new_ingredient. Updates the associated instructions, times, and ingredients. 
 		"""
-		return bool(set(ingredient1.type).intersection(set(ingredient2.type)))
+		# (1) switch the ingredients in self.ingredients list
+		for i, ingredient in enumerate(self.ingredients):
+			if ingredient.name == current_ingredient.name:
+				self.ingredients[i] = new_ingredient
+
+		# (2) update the instructions that mention it 
+
+
+		# (3) change the time if necessary
+		
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -789,6 +814,7 @@ def main():
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
+	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
 	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
@@ -799,8 +825,9 @@ def main():
 	recipe = Recipe(**recipe_attrs)
 
 	# # recipe.to_style('thai')
-	recipe.to_style('mexican')
+	recipe.to_style('Mexican')
 	# recipe.print_pretty()
+	recipe.compare_to_original()
 
 
 
