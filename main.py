@@ -206,10 +206,10 @@ class Instruction(object):
 	"""
 	def __init__(self, instruction):
 		self.instruction = instruction
-		instruction_words = word_tokenize(instruction)
-		self.cooking_tools = self.find_tools(instruction_words)
-		self.cooking_methods = self.find_methods(instruction_words)
-		self.time = self.find_time(instruction_words)
+		self.instruction_words = word_tokenize(self.instruction)
+		self.cooking_tools = self.find_tools(self.instruction_words)
+		self.cooking_methods = self.find_methods(self.instruction_words)
+		self.time = self.find_time(self.instruction_words)
 
 
 	def find_tools(self, instruction):
@@ -254,6 +254,12 @@ class Instruction(object):
 				except:
 					pass
 		return time
+
+
+	def update_instruction(self):
+		"""
+		"""
+		self.instruction = ' '.join(self.instruction_words)
 
 
 class Recipe(object):
@@ -311,6 +317,8 @@ class Recipe(object):
 
 
 	def compare_to_original(self):
+		"""
+		"""
 		print ('-----------------------')
 		for i in range(len(self.original_recipe.ingredients)):
 			if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
@@ -509,14 +517,6 @@ class Recipe(object):
 		try: most_common_fruit = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'F')
 		except StopIteration: most_common_fruit = None
 		
-		
-		# if most_common_sauce: print ('most_common_sauce: {}'.format(most_common_sauce.name))
-		# if most_common_meat: print ('most_common_meat: {}'.format(most_common_meat.name))
-		# if most_common_fruit: print ('most_common_fruit: {}'.format(most_common_fruit.name))
-		# if most_common_herb: print ('most_common_herb: {}'.format(most_common_herb.name))
-		# if most_common_vegetable: print ('most_common_vegetable: {}'.format(most_common_vegetable.name))
-		# if most_common_grain: print ('most_common_grain: {}'.format(most_common_grain.name))
-		# if most_common_dairy: print ('most_common_dairy: {}'.format(most_common_dairy.name))
 
 		# switch the ingredients
 		most_commons = filter(lambda mc: mc != None, 
@@ -554,8 +554,20 @@ class Recipe(object):
 			if ingredient.name == current_ingredient.name:
 				self.ingredients[i] = new_ingredient
 
-		# (2) update the instructions that mention it 
+		# (2) update the instructions that mention it
+		name_length = len(current_ingredient.name.split(' '))
+		for i, instruction in enumerate(self.instructions):
+			for j in range(len(instruction.instruction_words) - name_length):
+				if current_ingredient.name == ' '.join(instruction.instruction_words[j:j+name_length]):
+					self.instructions[i].instruction_words[j] = new_ingredient.name
 
+					# get rid of any extra words
+					for k in range(1, name_length):
+						self.instructions[i].instruction_words[j+k] == ''
+					self.instructions[i].update_instruction()
+					
+					# print ('--> looking for {}'.format(new_ingredient.name))
+					# print (':: {}'.format(self.instructions[i].instruction))
 
 		# (3) change the time if necessary
 		
@@ -828,7 +840,6 @@ def main():
 	recipe.to_style('Mexican')
 	# recipe.print_pretty()
 	recipe.compare_to_original()
-
 
 
 
