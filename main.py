@@ -24,6 +24,7 @@ import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
 import textwrap
+import copy
  
 
 DEBUG = False
@@ -46,6 +47,8 @@ herbs_spice_list = []
 dairy_list = []
 meat_list = []
 grain_list = []
+fruit_list = []
+
 
 class Ingredient(object):
 	"""
@@ -160,6 +163,8 @@ class Ingredient(object):
 		* V --> Vegetable 
 		* M --> Meat
 		* D --> Dairy
+		* F --> Fruit
+		* S --> Sauce
 		* ? --> Misc. 
 		"""
 		types = []
@@ -167,7 +172,9 @@ class Ingredient(object):
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in vegetable_list): types.append('V')
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in meat_list): types.append('M')
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in dairy_list): types.append('D') 
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in grain_list): types.append('G') 
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in grain_list): types.append('G')
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in fruit_list): types.append('F') 
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in sauce_list): types.append('S') 
 		if len(types) == 0: types.append('?') 
 		return types
 
@@ -243,6 +250,9 @@ class Recipe(object):
 		self.ingredients = [Ingredient(ing) for ing in self.ingredients]		# store ingredients in Ingredient objects
 		self.instructions = [Instruction(inst) for inst in self.instructions]	# store instructions in Instruction objects
 		self.cooking_tools, self.cooking_methods  = self.parse_instructions()	# get aggregate tools and methods apparent in all instructions
+
+		# save original copy to compare with the transformations
+		self.original_recipe = copy.deepcopy(self)
 	
 
 	def parse_instructions(self):
@@ -258,11 +268,12 @@ class Recipe(object):
 		return list(set(cooking_tools)), list(set(cooking_methods))
 		
 
-	def print_pretty(self):
+	def print_pretty(self, original=False):
 		"""
 		convert representation to easily parseable JSON format
 		"""
 		data = {}
+		if original: self = self.original_recipe
 		data['name'] = self.name
 		data['cooking tools'] = self.cooking_tools
 		data['cooking method'] = self.cooking_methods
@@ -419,38 +430,50 @@ class Recipe(object):
 
 		# hold reference to ingredients from original recipe
 		current_ingredient_names = [ingredient.name for ingredient in self.ingredients]
-		print ('current ingredients from original recipe are {}'.format(current_ingredient_names))
+		# print ('current ingredients from original recipe are {}'.format(current_ingredient_names))
 
 		# extract only the names and not the freqs -- will be sorted in decreasing order
 		key_new_ingredients = [freq[0] for freq in self.freq_dist(ingredient_names)]
 		# remove the ingredients that are already in there
 		key_new_ingredients = [ingredient for ingredient in key_new_ingredients if not(ingredient in current_ingredient_names)][:10]
-		print ('key ingredients from {} recipes found are {}'.format(style, key_new_ingredients))
+		# print ('key ingredients from {} recipes found are {}'.format(style, key_new_ingredients))
 
 
 		# get the whole ingredient objects -- this is to change actions accorgingly
 		# e.g. if we switch from pinches of salt to lemon, we need to change pinches to squeezes
-		ingredient_changes = [ingredient for ingredient in ingredients if ingredient.name in key_new_ingredients]
+		ingredient_changes = [ingredient for ingredient in ingredients if (ingredient.name in key_new_ingredients) and not(ingredient.name in current_ingredient_names)]
+
+		tmp = []
+		new = []
+		for ingredient in ingredient_changes:
+			if ingredient.name in tmp: continue
+			tmp.append(ingredient.name)
+			new.append(ingredient)
+
+		ingredient_changes = copy.deepcopy(new)
+		del new
+		del tmp
+
+		print ('--------------------------------')
+		print ('current ingredients')
+		print ('--------------------------------')
+		for ingredient in self.ingredients:
+			print ('{} --> {}'.format(ingredient.name, ingredient.type))
+
+		print ('--------------------------------')
+		print ('new (possible) ingredients')
+		print ('--------------------------------')
+		for ingredient in ingredient_changes:
+			print ('{} --> {}'.format(ingredient.name, ingredient.type))
 
 
-		# MUST SWITCH INGREDIENTS HERE FOR BELOW TO WORK
-		# change_ingredient_dict = {}
-		# for ingredient in ingredient_changes:
-		# 	change_measurment_dict[current_ingredient] = ingredient
+		# Find out which ingredients to switch 
 
+		# switch the ingredients
 
-		# # map old words to new changes
-		# change_measurment_dict = {}
-		# for ingredient in ingredient_changes:
-		# 	change_measurment_dict[ingredient.name] = ingredient.measurement
+		# update the instructions
 
-		# for instruction in self.instructions:
-		# 	new_words = []
-		# 	for word in instruction.instruction.split(' '):
-		# 		if word in change_measurment_dict.keys():
-		# 			word = change_measurment_dict[word]
-		# 		new_words.append(word)
-		# 	instruction.instruction = ' '.join(new_words)
+		# change the time if necessary
 
 		
 	def freq_dist(self, data):
@@ -465,7 +488,9 @@ class Recipe(object):
 
 	def similar_ingredients(self, ingredient1, ingredient2):
 		"""
+		checks if the ingredients are of a simialar type
 		"""
+		return bool(set(ingredient1.type).intersection(set(ingredient2.type)))
 
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
@@ -566,6 +591,7 @@ def build_dynamic_lists():
 	global dairy_list
 	global meat_list
 	global grain_list
+	global fruit_list
 
 	# build vegetable list
 	url = 'https://simple.wikipedia.org/wiki/List_of_vegetables'
@@ -662,6 +688,7 @@ def build_dynamic_lists():
 	dairy_list = lis_clean
 
 
+	# build grains list 
 	url = 'http://naturalhealthtechniques.com/list-of-grains-cereals-pastas-flours/'
 	result = requests.get(url, timeout=10)
 	c = result.content
@@ -680,6 +707,25 @@ def build_dynamic_lists():
 	grain_list = lis_clean
 
 
+	# build grains list 
+	url = 'http://naturalhealthtechniques.com/list-of-fruits/'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	div = soup.find('div', {'class': 'entry-content'})
+	lis = [li.text.strip() for li in div.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		lis_clean.append(li.lower())
+	fruit_list = lis_clean
+
+
 def timeit(method):
     def timed(*args, **kw):
         ts = time.time()
@@ -687,10 +733,10 @@ def timeit(method):
         te = time.time()
         if 'log_time' in kw:
             name = kw.get('log_name', method.__name__.upper())
-            kw['log_time'][name] = int((te - ts) * 100)
+            kw['log_time'][name] = int((te - ts))
         else:
             print '%r  %2.2f s' % \
-                  (method.__name__, (te - ts) * 100)
+                  (method.__name__, (te - ts))
         return result
     return timed
 
@@ -710,21 +756,9 @@ def main():
 	recipe = Recipe(**recipe_attrs)
 
 	# # recipe.to_style('thai')
-	# recipe.to_style('mexican')
-	recipe.print_pretty()
+	recipe.to_style('mexican')
+	# recipe.print_pretty()
 
-
-
-
-
-	# vegetable = 'tomato'
-	# print ('{} is a vegetable --> {}'.format(vegetable, any(vegetable in test.split(' ') for test in vegetable_list)))
-
-	# sauce = 'pesto'
-	# print ('{} is a sauce --> {}'.format(sauce, any(sauce in test.split(' ') for test in sauce_list)))
-
-	# herb = 'oregano'
-	# print ('{} is a herb/spice --> {}'.format(herb, any(herb in test.split(' ') for test in herbs_spice_list)))
 
 
 
