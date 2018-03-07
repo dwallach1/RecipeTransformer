@@ -166,16 +166,18 @@ class Ingredient(object):
 		* F --> Fruit
 		* S --> Sauce
 		* ? --> Misc. 
+
+		ordered by precedence of how telling the classification is --> bound to one classification
 		"""
-		types = []
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in herbs_spice_list): types.append('H')
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in vegetable_list): types.append('V')
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in meat_list): types.append('M')
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in dairy_list): types.append('D') 
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in grain_list): types.append('G')
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in fruit_list): types.append('F') 
-		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in sauce_list): types.append('S') 
-		if len(types) == 0: types.append('?') 
+		types = ''
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in meat_list) and len(types) == 0: types ='M' 
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in vegetable_list) and len(types) == 0: types = 'V'
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in dairy_list) and len(types) == 0: types = 'D' 
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in grain_list) and len(types) == 0: types = 'G'
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in sauce_list) and len(types) == 0: types = 'S'
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in herbs_spice_list) and len(types) == 0: types = 'H'
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in fruit_list) and len(types) == 0: types = 'F' 
+		if len(types) == 0: types = '?'
 		return types
 
 
@@ -395,7 +397,7 @@ class Recipe(object):
 		self.text_instructions.insert(-1, adding_chicken)
 
 
-	def to_style(self, style):
+	def to_style(self, style, threshold=0.9):
 		"""
 		search all recipes for recipes pertaining to the 'style' parameter and builds frequency dictionary.
 		Then adds/removes/augemnets ingredients to make it more like the 'style' of cuisine. 
@@ -442,6 +444,14 @@ class Recipe(object):
 		# get the whole ingredient objects -- this is to change actions accorgingly
 		# e.g. if we switch from pinches of salt to lemon, we need to change pinches to squeezes
 		ingredient_changes = [ingredient for ingredient in ingredients if (ingredient.name in key_new_ingredients) and not(ingredient.name in current_ingredient_names)]
+		
+		# clear up some memory
+		del ingredients_
+		del ingredients
+		del ingredient_names
+		del style_recipes
+		del soup
+
 
 		tmp = []
 		new = []
@@ -451,6 +461,8 @@ class Recipe(object):
 			new.append(ingredient)
 
 		ingredient_changes = copy.deepcopy(new)
+		
+		# no longer needed --> temporary use
 		del new
 		del tmp
 
@@ -467,9 +479,40 @@ class Recipe(object):
 			print ('{} --> {}'.format(ingredient.name, ingredient.type))
 
 
-		# Find out which ingredients to switch 
+		# Find out most common ingredients from all recipes of type 'style' -- then decide which to switch and/or add to current recipe
+		try: most_common_sauce = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'S')
+		except StopIteration: most_common_sauce = None 
+		try: most_common_meat = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'M')
+		except StopIteration: most_common_meat = None
+		try: most_common_vegetable = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'V')
+		except StopIteration: most_common_vegetable = None
+		try: most_common_grain = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'G')
+		except StopIteration: most_common_grain = None
+		try: most_common_dairy = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'D')
+		except StopIteration: most_common_dairy = None
+		try: most_common_herb = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'H')
+		except StopIteration: most_common_herb = None
+		try: most_common_fruit = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'F')
+		except StopIteration: most_common_fruit = None
+		
+		
+		if most_common_sauce: print ('most_common_sauce: {}'.format(most_common_sauce.name))
+		if most_common_meat: print ('most_common_meat: {}'.format(most_common_meat.name))
+		if most_common_fruit: print ('most_common_fruit: {}'.format(most_common_fruit.name))
+		if most_common_herb: print ('most_common_herb: {}'.format(most_common_herb.name))
+		if most_common_vegetable: print ('most_common_vegetable: {}'.format(most_common_vegetable.name))
+		if most_common_grain: print ('most_common_grain: {}'.format(most_common_grain.name))
+		if most_common_dairy: print ('most_common_dairy: {}'.format(most_common_dairy.name))
 
 		# switch the ingredients
+		most_commons = filter(lambda mc: mc != None, 
+					[most_common_meat, most_common_vegetable, most_common_sauce, most_common_grain, most_common_herb, most_common_dairy, most_common_fruit])
+
+		try: most_commons = most_commons[:int(7*threshold)]
+		except: pass
+
+		print ('most commons {}'.format([m.name for m in most_commons]))
+
 
 		# update the instructions
 
