@@ -50,34 +50,55 @@ The following are the methods of the Recipe class
 * **Recipe Class** is the main class in which all the transformation methods are. It also holds a list of Ingredient objects and Instruction objects parsed from the input recipe's URL (from allrecipes.com). It also finds the cooking tools and cooking methods used in the recipe by parsing the Instruction objects once they are instatiated and built. The Recipe class gets built by a dictionary object returned from `parse_url(URL)` function which scrapes the URL from allrecipes.com and returns a dictionary with all the necessary information to build the Recipe object. 
 
 The Recipe class gets instatiated with a dictionary with the following schema:
-
+<br />
 {
+	<br />
 		name: string
+		<br />
 		preptime: int
+		<br />
 		cooktime: int
+		<br />
 		totaltime: int
+		<br />
 		ingredients: list of strings
+		<br />
 		instructions: list of strings
+		<br />
 		calories: int
+		<br />
 		carbs: int
+		<br />
 		fat: int
+		<br />
 		protien: int
+		<br />
 		cholesterol: int
+		<br />
 		sodium: int
-
+<br />
 }
+<br />
 
 and thus you can access information like `sodium` by calling recipe.sodium etc. The ingredients and instruction lists are instatiated and parsed in the Recipe's `__init__` method.
 
 
 * **Ingredient Class** is used to parse and store the Ingredients in a clean and easily accessible manner. An Instruction object takes in a string (the text of a bullet point from the recipe's url in the ingredients section) and parses out the name, quantity, measurement, descriptor, preperation, and type. It does this using NLTK's part of speech tagger as well as a word bank. The type is a single letter correlated to one of the following:
+<br />
 		* H --> Herbs / Spices
+		<br />
 		* V --> Vegetable 
+		<br />
 		* M --> Meat
+		<br />
 		* D --> Dairy
+		<br />
 		* F --> Fruit
+		<br />
 		* S --> Sauce
+		<br />
 		* ? --> Misc.
+		<br />
 
 This is done by building out lists parsed from websites like wikipedia.com and naturalhealthtechniques.com that have long records for each category. By tagging each ingredient with a type, we are able to infer a lot more about the ingredient and it is integral to the Recipe's to_style method.
 
