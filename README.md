@@ -53,29 +53,29 @@ The Recipe class gets instatiated with a dictionary with the following schema:
 <br />
 {
 	<br />
-		name: string
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name: string
 		<br />
-		preptime: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		preptime: int
 		<br />
-		cooktime: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		cooktime: int
 		<br />
-		totaltime: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		totaltime: int
 		<br />
-		ingredients: list of strings
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		ingredients: list of strings
 		<br />
-		instructions: list of strings
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		instructions: list of strings
 		<br />
-		calories: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		calories: int
 		<br />
-		carbs: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		carbs: int
 		<br />
-		fat: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		fat: int
 		<br />
-		protien: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		protien: int
 		<br />
-		cholesterol: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		cholesterol: int
 		<br />
-		sodium: int
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		sodium: int
 <br />
 }
 <br />
@@ -85,19 +85,19 @@ and thus you can access information like `sodium` by calling recipe.sodium etc. 
 
 * **Ingredient Class** is used to parse and store the Ingredients in a clean and easily accessible manner. An Instruction object takes in a string (the text of a bullet point from the recipe's url in the ingredients section) and parses out the name, quantity, measurement, descriptor, preperation, and type. It does this using NLTK's part of speech tagger as well as a word bank. The type is a single letter correlated to one of the following:
 <br />
-		* H --> Herbs / Spices
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* H --> Herbs / Spices
 		<br />
-		* V --> Vegetable 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* V --> Vegetable 
 		<br />
-		* M --> Meat
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* M --> Meat
 		<br />
-		* D --> Dairy
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* D --> Dairy
 		<br />
-		* F --> Fruit
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* F --> Fruit
 		<br />
-		* S --> Sauce
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* S --> Sauce
 		<br />
-		* ? --> Misc.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* ? --> Misc.
 		<br />
 
 This is done by building out lists parsed from websites like wikipedia.com and naturalhealthtechniques.com that have long records for each category. By tagging each ingredient with a type, we are able to infer a lot more about the ingredient and it is integral to the Recipe's to_style method.
