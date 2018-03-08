@@ -40,12 +40,6 @@ time_indicator_regex = '(min)'
 
 
 
-# meats_regex = '(beef|steak|chicken|pork|bacon|fish|salmon|tuna|sausage)( (chop|steak|breast))?'
-# meat_sauces_regex = '(fish) (sauce)'
-# meat_stocks_regex = '(fish|chicken) (stock|broth)'
-
-
-
 # start of word banks
 
 healthy_substitutes = {
@@ -95,6 +89,7 @@ dairy_list = []
 meat_list = []
 grain_list = []
 fruit_list = []
+seafood_list = []
 
 
 class Ingredient(object):
@@ -230,6 +225,7 @@ class Ingredient(object):
 		* D --> Dairy
 		* F --> Fruit
 		* S --> Sauce
+		* P --> Pescatarian (Seafood)
 		* ? --> Misc. 
 
 		ordered by precedence of how telling the classification is --> bound to one classification
@@ -240,6 +236,7 @@ class Ingredient(object):
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in dairy_list) and len(types) == 0: types = 'D' 
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in grain_list) and len(types) == 0: types = 'G'
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in sauce_list) and len(types) == 0: types = 'S'
+		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in seafood_list) and len(types) == 0: types = 'P'
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in herbs_spice_list) and len(types) == 0: types = 'H'
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in fruit_list) and len(types) == 0: types = 'F' 
 		if len(types) == 0: types = '?'
@@ -511,7 +508,7 @@ class Recipe(object):
 		# update/add/build the necessary instructions
 		boiling_meat = 'Place the {} in a non-stick pan and fill the pan with water until the {} are covered.'.format(meat, meat) \
 		+ ' Simmer uncovered for 5 minutes.' \
-		+ ' Then, turn off the heat and cover for 15 minutes. Remove the breasts and set aside.'
+		+ ' Then, turn off the heat and cover for 15 minutes. Remove the {} and set aside.'.format(meat)
 		adding_meat = 'Shred the {} by pulling the meat apart into thin slices by hand. Stir in the shredded {}.'.format(meat, meat)
 
 		# Instatiate objects
@@ -522,6 +519,60 @@ class Recipe(object):
 		# add the instructions to the recipe
 		self.instructions.insert(0, boiling_meat_instruction)
 		self.instructions.insert(-1, adding_meat_instruction)
+
+
+	def to_pescatarian(self):
+		"""
+		Replaces meat with seafood ingredients. Uses a random integer generator to randomly choose
+		which substitute from the seafood_list to use. If no meat, then augment the recipe with a random 
+		seafood
+		"""
+		swapped = False
+		for i, ingredient in enumerate(self.ingredients):
+			if ingredient.type == 'M':
+				idx = random.randint(0, len(seafood_list) - 1)
+				seafood_sub = Ingredient('3 cups of {}'.format(seafood_list[idx]))
+				seafood_sub.quantity = ingredient.quantity
+				self.swap_ingredients(self.ingredients[i], seafood_sub)
+				swapped = True
+
+		if not swapped:
+			# augment the recipe instead of swapping because no meats in the recipe
+			idx = random.randint(0, len(seafood_list) - 1)
+			seafood_ing = Ingredient('3 cups of {}'.format(seafood_list[idx]))
+			self.ingredients.append(seafood_ing)
+
+			grill_seafood = 'Place the {} in a non-stick pan and fill the pan with oil.'.format(seafood_ing.name) \
+			+ ' Grill both sides until charred, takes about 7 minutes.' \
+			+ ' Then, turn off the heat and cover for 15 minutes.'
+			add_seafood = 'flip the {} onto the plate over the other ingredients.'.format(seafood_ing.name)
+
+			# Instatiate objects
+			grill_seafood_instruction = Instruction(grill_seafood)
+			add_seafood_instruction = Instruction(add_seafood)
+
+
+			# add the instructions to the recipe
+			self.instructions.insert(0, grill_seafood_instruction)
+			self.instructions.insert(-1, add_seafood_instruction)
+		
+		self.name = self.name + ' (pescatarian)'
+		
+
+	def from_pescatarian(self):
+		"""
+		Replaces seafood with meat and vegetable ingredients. Uses a random integer generator to randomly choose
+		which substitute from the meat_list to use. If no seafood, then augment the recipe with a random 
+		meat/dairy/grain
+		"""
+		for i, ingredient in enumerate(self.ingredients):
+			if ingredient.type == 'P':
+				idx = random.randint(0, len(meat_substitutes) - 1)
+				meat_sub = Ingredient(meat_substitutes[idx])
+				meat_sub.quantity = ingredient.quantity
+				self.swap_ingredients(self.ingredients[i], meat_sub)
+		
+		self.name = self.name + ' (non-pescatarian)'
 
 
 	def to_style(self, style, threshold=1.0):
@@ -765,6 +816,7 @@ def build_dynamic_lists():
 	global meat_list
 	global grain_list
 	global fruit_list
+	global seafood_list
 
 	# build vegetable list
 	url = 'https://simple.wikipedia.org/wiki/List_of_vegetables'
@@ -841,7 +893,7 @@ def build_dynamic_lists():
 		lis_clean.append(li.lower())
 	meat_list = lis_clean
 
-	# add seafoods to the meat the list
+	# build seafood_list and also extend to the meat_list
 	url = 'http://naturalhealthtechniques.com/list-of-fish-and-seafood/'
 	result = requests.get(url, timeout=10)
 	c = result.content
@@ -858,6 +910,7 @@ def build_dynamic_lists():
 		if re.search('\n', li): continue
 		lis_clean.append(li.lower())
 	meat_list.extend(lis_clean)
+	seafood_list = lis_clean
 
 	# build dairy list
 	url = 'http://naturalhealthtechniques.com/list-of-cheese-dairy-products/'
