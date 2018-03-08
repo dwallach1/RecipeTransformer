@@ -40,9 +40,9 @@ time_indicator_regex = '(min)'
 
 
 
-meats_regex = '(beef|steak|chicken|pork|bacon|fish|salmon|tuna|sausage)( (chop|steak|breast))?'
-meat_sauces_regex = '(fish) (sauce)'
-meat_stocks_regex = '(fish|chicken) (stock|broth)'
+# meats_regex = '(beef|steak|chicken|pork|bacon|fish|salmon|tuna|sausage)( (chop|steak|breast))?'
+# meat_sauces_regex = '(fish) (sauce)'
+# meat_stocks_regex = '(fish|chicken) (stock|broth)'
 
 
 
@@ -58,7 +58,10 @@ healthy_substitutes = {
 	'flour': '1 cup of whole-wheat flour',
 	'butter': '3 tablespoons of unsweetened applesauce',
 	'cream': '3 cups of greek yogurt',
-
+	'eggs': '3 egg whites',
+	'milk': '4 ounces of skim milk',
+	'potatoes': '4 handfuls of arugula',
+	'french fries': '4 handfuls of arugula'
 
 }
 
@@ -453,6 +456,7 @@ class Recipe(object):
 				dairy_sub.quantity = ingredient.quantity
 				self.swap_ingredients(self.ingredients[i], dairy_sub)
 		
+		# update the name of the recipe
 		self.name = self.name + ' (vegan)'
 
 
@@ -471,6 +475,8 @@ class Recipe(object):
 		self.ingredients.append(Ingredient('3 cups of {}'.format(dairy)))
 
 		# create and add new instructions for making and inserting the dairy
+		
+		# update the name of the recipe
 		self.name = self.name + ' (non-vegan)'
 
 
@@ -637,7 +643,8 @@ class Recipe(object):
 
 	def swap_ingredients(self, current_ingredient, new_ingredient):
 		"""
-		replaces the current_ingredient with the new_ingredient. Updates the associated instructions, times, and ingredients. 
+		replaces the current_ingredient with the new_ingredient. 
+		Updates the associated instructions, times, and ingredients. 
 		"""
 		# (1) switch the ingredients in self.ingredients list
 		for i, ingredient in enumerate(self.ingredients):
@@ -655,13 +662,7 @@ class Recipe(object):
 					for k in range(1, name_length):
 						self.instructions[i].instruction_words[j+k] == ''
 					self.instructions[i].update_instruction()
-					
-					# print ('--> looking for {}'.format(new_ingredient.name))
-					# print (':: {}'.format(self.instructions[i].instruction))
-
-		# (3) change the time if necessary
-
-		# do not think we will implement -- requires tracking times from each of the freq dist which will take too much time + space
+									
 		
 
 
@@ -840,6 +841,23 @@ def build_dynamic_lists():
 		lis_clean.append(li.lower())
 	meat_list = lis_clean
 
+	# add seafoods to the meat the list
+	url = 'http://naturalhealthtechniques.com/list-of-fish-and-seafood/'
+	result = requests.get(url, timeout=10)
+	c = result.content
+
+	# store in BeautifulSoup object to parse HTML DOM
+	soup = BeautifulSoup(c, "lxml")
+
+	div = soup.find('div', {'class': 'entry-content'})
+	lis = [li.text.strip() for li in div.find_all('li')]
+	lis_clean = []
+	for li in lis:
+		if len(li) == 1: continue
+		if re.search('\d', li): continue
+		if re.search('\n', li): continue
+		lis_clean.append(li.lower())
+	meat_list.extend(lis_clean)
 
 	# build dairy list
 	url = 'http://naturalhealthtechniques.com/list-of-cheese-dairy-products/'
@@ -921,14 +939,15 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
-	recipe.from_vegetarian()
+	recipe.to_vegan()
+	# recipe.from_vegetarian()
 	# recipe.to_vegetarian()
 	# recipe.to_healthy()
 	# recipe.to_style('Mexican')
