@@ -15,6 +15,7 @@ Authors:
 
 """
 import time
+import random
 import re
 import json
 from urlparse import urlparse
@@ -29,6 +30,8 @@ import copy
 
 DEBUG = False
 
+
+# simple regex used to find specific attributes in strings 
 measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
 tool_indicator_regex = '(pan |skillet|pot |sheet|grate|whisk)'
 method_indicator_regex = '(boil|bake|simmer|stir)'
@@ -43,11 +46,20 @@ meat_stocks_regex = '(fish|chicken) (stock|broth)'
 
 
 
+# start of word banks
+
 healthy_substitutes = {
 	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
+	# the quantities are just for parsing, they are updated to be the amount used of the unhealthy version in the recipe
+	# inside the Recipe to_healthy method
 	'oil': 	'2 tablespoons of Prune Puree',
 	'cheese': '3 tablespoons of Nutritional Yeast',
-	'pasta': '8 ounces of shredded zucchini'
+	'pasta': '8 ounces of shredded zucchini',
+	'flour': '1 cup of whole-wheat flour',
+	'butter': '3 tablespoons of unsweetened applesauce',
+	'cream': '3 cups of greek yogurt',
+
+
 }
 
 unhealthy_substitutes = {
@@ -58,8 +70,7 @@ unhealthy_substitutes = {
 
 meat_substitutes = ['1 cup Tofu', '1 cup ICantBelieveItsNotMeat']
 
-# build these regexs dynamically from wikipedia using the build_dynamix_lists() function
-# these can be used to tag the domain of an ingredient -- used in to_style method of Recipe class 
+# build list dynamically from wikipedia using the build_dynamic_lists() function -- used to tag the domain of an ingredient
 sauce_list = []
 vegetable_list = []
 herbs_spice_list = []
@@ -341,10 +352,14 @@ class Recipe(object):
 		If no changes were made, then they will be identical. 
 		"""
 		print ('-----------------------')
-		print ('The following changes were made: ')
-		for i in range(len(self.original_recipe.ingredients)):
-			if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
-				print ('{} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
+		print ('The following changes were made to the original recipe: ')
+		if len(self.original_recipe.ingredients) < len(self.ingredients):
+			for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
+				print ('* added {}'.format(self.ingredients[i].name))
+		else:
+			for i in range(len(self.original_recipe.ingredients)):
+				if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
+					print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
 		print ('-----------------------')
 
 
@@ -409,7 +424,6 @@ class Recipe(object):
 		self.name = self.name + ' (unhealthy)'
 		
 
-
 	def to_vegan(self):
 		"""
 		"""
@@ -424,63 +438,99 @@ class Recipe(object):
 
 	def to_vegetarian(self):
 		"""
-		Replaces meat or seafood ingredients with vegetarian alternatives. Directly replaces 
-		each ingredient without changing the actual cooking style. 
+		Replaces meat or seafood ingredients with vegetarian alternatives. Uses a random integer generator to randomly choose
+		which substitute from the meat_substitutes list to use. 
 		"""
-		for ing in self.ingredients:
-			meat_match = re.search(meats_regex, ing.name, re.I)
 
-			# replace any meat stocks with veggie stocks, fish sauce with soy sauce, and 
-			# meat with some amount of tofu
-			if re.search(meat_stocks_regex, ing.name, re.I):
-				for i, inst in enumerate(self.text_instructions):
-					self.text_instructions[i] = re.sub(meat_stocks_regex, r'vegetable \2', inst)
-				ing.name = re.sub(meat_stocks_regex, r'vegetable \2', ing.name)
+		for i, ingredient in enumerate(self.ingredients):
+			if ingredient.type == 'M':
+				idx = random.randint(0, len(meat_substitutes) - 1)
+				meat_sub = Ingredient(meat_substitutes[idx])
+				meat_sub.quantity = ingredient.quantity
+				self.swap_ingredients(self.ingredients[i], meat_sub)
+		
+		self.name = self.name + ' (vegetarian)'
 
-			elif re.search(meat_sauces_regex, ing.name, re.I):
-				for i, inst in enumerate(self.text_instructions):
-					self.text_instructions[i] = re.sub(meat_sauces_regex, r'soy \2', inst)
-				ing.name = re.sub(meat_stocks_regex, r'soy \2', ing.name)
 
-			elif meat_match:
-				meat_ing = meat_match.group(0)
-				print meat_ing
-				for i, inst in enumerate(self.text_instructions):
-					self.text_instructions[i] = re.sub(meat_ing, 'tofu', inst)
+		# for ing in self.ingredients:
+		# 	meat_match = re.search(meats_regex, ing.name, re.I)
 
-				ing.name = 'tofu'
-				ing.descriptor = []
-				ing.preperation = []
+		# 	# replace any meat stocks with veggie stocks, fish sauce with soy sauce, and 
+		# 	# meat with some amount of tofu
+		# 	if re.search(meat_stocks_regex, ing.name, re.I):
+		# 		for i, inst in enumerate(self.text_instructions):
+		# 			self.text_instructions[i] = re.sub(meat_stocks_regex, r'vegetable \2', inst)
+		# 		ing.name = re.sub(meat_stocks_regex, r'vegetable \2', ing.name)
 
-				if 'ounce' in ing.measurement:
-					pass
-				elif re.search('pounds?\s', ing.measurement):
-					ing.quantity /= 16.
-				elif self.protien:
-					ing.quantity = float(self.protien) / 4.
-				else:
-					ing.quantity = 8 
+		# 	elif re.search(meat_sauces_regex, ing.name, re.I):
+		# 		for i, inst in enumerate(self.text_instructions):
+		# 			self.text_instructions[i] = re.sub(meat_sauces_regex, r'soy \2', inst)
+		# 		ing.name = re.sub(meat_stocks_regex, r'soy \2', ing.name)
 
-				ing.measurement = 'ounce' if ing.quantity == 1 else 'ounces'
+		# 	elif meat_match:
+		# 		meat_ing = meat_match.group(0)
+		# 		print meat_ing
+		# 		for i, inst in enumerate(self.text_instructions):
+		# 			self.text_instructions[i] = re.sub(meat_ing, 'tofu', inst)
 
-		# remove any meat terms we missed and 'tofus' artifacts
-		for i, inst in enumerate(self.text_instructions):
-			new_inst = re.sub(meats_regex, 'tofu', inst)
-			self.text_instructions[i] = re.sub('tofus', 'tofu', new_inst)
+		# 		ing.name = 'tofu'
+		# 		ing.descriptor = []
+		# 		ing.preperation = []
+
+		# 		if 'ounce' in ing.measurement:
+		# 			pass
+		# 		elif re.search('pounds?\s', ing.measurement):
+		# 			ing.quantity /= 16.
+		# 		elif self.protien:
+		# 			ing.quantity = float(self.protien) / 4.
+		# 		else:
+		# 			ing.quantity = 8 
+
+		# 		ing.measurement = 'ounce' if ing.quantity == 1 else 'ounces'
+
+		# # remove any meat terms we missed and 'tofus' artifacts
+		# for i, inst in enumerate(self.text_instructions):
+		# 	new_inst = re.sub(meats_regex, 'tofu', inst)
+		# 	self.text_instructions[i] = re.sub('tofus', 'tofu', new_inst)
 
 
 	def from_vegetarian(self):
 		"""
-		Adds chicken to the recipe
+		Adds a random meat from the gloabl meat_list to the recipe, updates instructions and times
+		accordingly
 		"""
-		self.ingredients.append(Ingredient('4 skinless, boneless chicken breast halves'))
 
-		boiling_chicken = 'Place the chicken breasts in a non-stick pan and fill the pan with water until the breasts are covered.' \
+		# find a random meat from the meat_list to add
+		idx = random.randint(0, len(meat_list) - 1)
+		meat = meat_list[idx]
+		self.ingredients.append(Ingredient('3 cups of boiled {}'.format(meat)))
+
+
+		# update/add/build the necessary instructions
+		boiling_meat = 'Place the {} in a non-stick pan and fill the pan with water until the {} are covered.'.format(meat, meat) \
 		+ ' Simmer uncovered for 5 minutes.' \
 		+ ' Then, turn off the heat and cover for 15 minutes. Remove the breasts and set aside.'
-		adding_chicken = 'Shred the chicken breasts by pulling the meat apart into thin slices by hand. Stir in the shredded chicken.'
-		self.text_instructions.insert(0, boiling_chicken)
-		self.text_instructions.insert(-1, adding_chicken)
+		adding_meat = 'Shred the {} by pulling the meat apart into thin slices by hand. Stir in the shredded {}.'.format(meat, meat)
+
+		# Instatiate objects
+		boiling_meat_instruction = Instruction(boiling_meat)
+		adding_meat_instruction = Instruction(adding_meat)
+
+
+		# add the instructions to the recipe
+		self.instructions.insert(0, boiling_meat_instruction)
+		self.instructions.insert(-1, adding_meat_instruction)
+
+
+		# self.ingredients.append(Ingredient('4 skinless, boneless chicken breast halves'))
+
+
+		# boiling_chicken = 'Place the chicken breasts in a non-stick pan and fill the pan with water until the breasts are covered.' \
+		# + ' Simmer uncovered for 5 minutes.' \
+		# + ' Then, turn off the heat and cover for 15 minutes. Remove the breasts and set aside.'
+		# adding_chicken = 'Shred the chicken breasts by pulling the meat apart into thin slices by hand. Stir in the shredded chicken.'
+		# self.text_instructions.insert(0, boiling_chicken)
+		# self.text_instructions.insert(-1, adding_chicken)
 
 
 	def to_style(self, style, threshold=1.0):
@@ -886,14 +936,16 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	# test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
-	recipe.to_healthy()
+	recipe.from_vegetarian()
+	# recipe.to_vegetarian()
+	# recipe.to_healthy()
 	# recipe.to_style('Mexican')
 	recipe.print_pretty()
 	recipe.compare_to_original()
