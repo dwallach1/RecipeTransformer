@@ -64,7 +64,21 @@ healthy_substitutes = {
 
 unhealthy_substitutes = {
 	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
-	
+	# the quantities are just for parsing, they are updated to be the amount used of the unhealthy version in the recipe
+	# inside the Recipe to_healthy method
+}
+
+dairy_substitutes = {
+	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
+	# the quantities are just for parsing, they are updated to be the amount used of the unhealthy version in the recipe
+	# inside the Recipe to_healthy method
+	'butter': '2 tablespoons of olive oil',
+	'cheese': '3 tablespoons of yeast flakes',
+	'milk': '12 ounces of soy milk',
+	'sour cream': '2 avacados',
+	'cream': '2 cups of almond milk yogurt',
+	'ice cream': '2 cups of sorbet'
+
 }
 
 # do not need a dict because we switch based on 'type' attribute instead of 'name' attribute
@@ -431,7 +445,15 @@ class Recipe(object):
 		# start by making vegetarian
 		self.to_vegetarian()
 
-		# do additional transformations
+		# add a random dairy from the dairy_substitutes dictionary
+		for i, ingredient in enumerate(self.ingredients):
+			if ingredient.type == 'D':
+				idx = random.randint(0, len(dairy_substitutes.keys()) - 1)
+				dairy_sub = Ingredient(dairy_substitutes[dairy_substitutes.keys()[idx]])
+				dairy_sub.quantity = ingredient.quantity
+				self.swap_ingredients(self.ingredients[i], dairy_sub)
+		
+		self.name = self.name + ' (vegan)'
 
 
 	def from_vegan(self):
@@ -441,7 +463,15 @@ class Recipe(object):
 		# start by adding random meat
 		self.from_vegetarian()
 
-		# do more additions (i.e. add dairy etc)
+		# find random dairy
+		idx = random.randint(0, len(dairy_list) - 1)
+		dairy = dairy_list[idx]
+
+		# add it to the ingredients list
+		self.ingredients.append(Ingredient('3 cups of {}'.format(dairy)))
+
+		# create and add new instructions for making and inserting the dairy
+		self.name = self.name + ' (non-vegan)'
 
 
 	def to_vegetarian(self):
@@ -458,48 +488,6 @@ class Recipe(object):
 				self.swap_ingredients(self.ingredients[i], meat_sub)
 		
 		self.name = self.name + ' (vegetarian)'
-
-
-		# for ing in self.ingredients:
-		# 	meat_match = re.search(meats_regex, ing.name, re.I)
-
-		# 	# replace any meat stocks with veggie stocks, fish sauce with soy sauce, and 
-		# 	# meat with some amount of tofu
-		# 	if re.search(meat_stocks_regex, ing.name, re.I):
-		# 		for i, inst in enumerate(self.text_instructions):
-		# 			self.text_instructions[i] = re.sub(meat_stocks_regex, r'vegetable \2', inst)
-		# 		ing.name = re.sub(meat_stocks_regex, r'vegetable \2', ing.name)
-
-		# 	elif re.search(meat_sauces_regex, ing.name, re.I):
-		# 		for i, inst in enumerate(self.text_instructions):
-		# 			self.text_instructions[i] = re.sub(meat_sauces_regex, r'soy \2', inst)
-		# 		ing.name = re.sub(meat_stocks_regex, r'soy \2', ing.name)
-
-		# 	elif meat_match:
-		# 		meat_ing = meat_match.group(0)
-		# 		print meat_ing
-		# 		for i, inst in enumerate(self.text_instructions):
-		# 			self.text_instructions[i] = re.sub(meat_ing, 'tofu', inst)
-
-		# 		ing.name = 'tofu'
-		# 		ing.descriptor = []
-		# 		ing.preperation = []
-
-		# 		if 'ounce' in ing.measurement:
-		# 			pass
-		# 		elif re.search('pounds?\s', ing.measurement):
-		# 			ing.quantity /= 16.
-		# 		elif self.protien:
-		# 			ing.quantity = float(self.protien) / 4.
-		# 		else:
-		# 			ing.quantity = 8 
-
-		# 		ing.measurement = 'ounce' if ing.quantity == 1 else 'ounces'
-
-		# # remove any meat terms we missed and 'tofus' artifacts
-		# for i, inst in enumerate(self.text_instructions):
-		# 	new_inst = re.sub(meats_regex, 'tofu', inst)
-		# 	self.text_instructions[i] = re.sub('tofus', 'tofu', new_inst)
 
 
 	def from_vegetarian(self):
@@ -528,17 +516,6 @@ class Recipe(object):
 		# add the instructions to the recipe
 		self.instructions.insert(0, boiling_meat_instruction)
 		self.instructions.insert(-1, adding_meat_instruction)
-
-
-		# self.ingredients.append(Ingredient('4 skinless, boneless chicken breast halves'))
-
-
-		# boiling_chicken = 'Place the chicken breasts in a non-stick pan and fill the pan with water until the breasts are covered.' \
-		# + ' Simmer uncovered for 5 minutes.' \
-		# + ' Then, turn off the heat and cover for 15 minutes. Remove the breasts and set aside.'
-		# adding_chicken = 'Shred the chicken breasts by pulling the meat apart into thin slices by hand. Stir in the shredded chicken.'
-		# self.text_instructions.insert(0, boiling_chicken)
-		# self.text_instructions.insert(-1, adding_chicken)
 
 
 	def to_style(self, style, threshold=1.0):
