@@ -70,6 +70,7 @@ recipe_vegan.print_pretty()				# print the new recipe
 
 
 * **Ingredient Class** is used to parse and store the Ingredients in a clean and easily accessible manner. An Instruction object takes in a string (the text of a bullet point from the recipe's url in the ingredients section) and parses out the name, quantity, measurement, descriptor, preperation, and type. It does this using NLTK's part of speech tagger as well as a word bank. The type is a single letter correlated to one of the following:
+		<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* H --> Herbs / Spices
 		<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* V --> Vegetable 
@@ -103,7 +104,7 @@ The following are the methods of the Recipe class
 * from_vegan() - replaces vegan ingredients with non-vegan ingredients like meat, dairy, ect. 
 * to_vegetarian() - replaces non-vegetarian ingredients (meat) with vegetarian substitutes such as tofu and such. Updates the instructions and times accordingly
 * from_vegetarian() - adds a random meat to the recipe and updates the instructions and times
-* to_style(style, threshold=0.9) - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
+* to_style(style, threshold=1.0) - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
 
 
 # Dependencies 
