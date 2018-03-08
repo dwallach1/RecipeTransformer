@@ -32,12 +32,31 @@ DEBUG = False
 measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
 tool_indicator_regex = '(pan |skillet|pot |sheet|grate|whisk)'
 method_indicator_regex = '(boil|bake|simmer|stir)'
+heat_method_indicator_regex = ('boil|bake|simmer|stir')
 time_indicator_regex = '(min)'
+
+
+
 meats_regex = '(beef|steak|chicken|pork|bacon|fish|salmon|tuna|sausage)( (chop|steak|breast))?'
 meat_sauces_regex = '(fish) (sauce)'
 meat_stocks_regex = '(fish|chicken) (stock|broth)'
-heat_method_indicator_regex = ('boil|bake|simmer|stir')
 
+
+
+healthy_substitutes = {
+	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
+	'oil': 	'2 tablespoons of Prune Puree',
+	'cheese': '3 tablespoons of Nutritional Yeast',
+	'pasta': '8 ounces of shredded zucchini'
+}
+
+unhealthy_substitutes = {
+	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
+	
+}
+
+
+meat_substitutes = ['1 cup Tofu', '1 cup ICantBelieveItsNotMeat']
 
 # build these regexs dynamically from wikipedia using the build_dynamix_lists() function
 # these can be used to tag the domain of an ingredient -- used in to_style method of Recipe class 
@@ -318,8 +337,11 @@ class Recipe(object):
 
 	def compare_to_original(self):
 		"""
+		Compares the current recipe to the original recipe the object was instatiated with.
+		If no changes were made, then they will be identical. 
 		"""
 		print ('-----------------------')
+		print ('The following changes were made: ')
 		for i in range(len(self.original_recipe.ingredients)):
 			if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
 				print ('{} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
@@ -360,11 +382,41 @@ class Recipe(object):
 
 	def to_healthy(self):
 		"""
+		Transforms the recipe to a more healthy version by removing and/or replacing unhealthy ingredients
+		"""
+		for i, ingredient in enumerate(self.ingredients):
+			if any(name in ingredient.name.split(' ') for name in healthy_substitutes.keys()):
+				key = next(name for name in ingredient.name.split(' ') if name in healthy_substitutes.keys())
+				healthy_sub = Ingredient(healthy_substitutes[key])
+				healthy_sub.quantity = ingredient.quantity
+				self.swap_ingredients(self.ingredients[i], healthy_sub)
+		
+		self.name = self.name + ' (healthy)'
+
+
+	def from_healthy(self):
+		"""
+		Transforms the recipe to a less healthy (more delicous) version by adding unhealthy ingredients and/or replacing 
+		healthy ingredients
+		"""
+		for i, ingredient in enumerate(self.ingredients):
+			if any(name in ingredient.name.split(' ') for name in unhealthy_substitutes.keys()):
+				key = next(name for name in ingredient.name.split(' ') if name in unhealthy_substitutes.keys())
+				unhealthy_sub = Ingredient(healthy_substitutes[key])
+				unhealthy_sub.quantity = ingredient.quantity
+				self.swap_ingredients(self.ingredients[i], unhealthy_sub)
+		
+		self.name = self.name + ' (unhealthy)'
+		
+
+
+	def to_vegan(self):
+		"""
 		"""
 		pass
 
 
-	def from_healthy(self):
+	def from_vegan(self):
 		"""
 		"""
 		pass
@@ -534,6 +586,9 @@ class Recipe(object):
 			except StopIteration: continue
 			self.swap_ingredients(current_ingredient, new_ingredient)
 
+		# update name
+		self.name = self.name + ' (' + style + ')'
+
 
 	def freq_dist(self, data):
 		"""
@@ -570,6 +625,8 @@ class Recipe(object):
 					# print (':: {}'.format(self.instructions[i].instruction))
 
 		# (3) change the time if necessary
+
+		# do not think we will implement -- requires tracking times from each of the freq dist which will take too much time + space
 		
 
 
@@ -836,9 +893,9 @@ def main():
 	recipe_attrs = parse_url(test_url)
 	recipe = Recipe(**recipe_attrs)
 
-	# # recipe.to_style('thai')
-	recipe.to_style('Mexican')
-	# recipe.print_pretty()
+	recipe.to_healthy()
+	# recipe.to_style('Mexican')
+	recipe.print_pretty()
 	recipe.compare_to_original()
 
 
