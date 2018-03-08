@@ -67,7 +67,7 @@ unhealthy_substitutes = {
 	
 }
 
-
+# do not need a dict because we switch based on 'type' attribute instead of 'name' attribute
 meat_substitutes = ['1 cup Tofu', '1 cup ICantBelieveItsNotMeat']
 
 # build list dynamically from wikipedia using the build_dynamic_lists() function -- used to tag the domain of an ingredient
@@ -426,14 +426,22 @@ class Recipe(object):
 
 	def to_vegan(self):
 		"""
+		Transforms the recipe to be vegan by removing and/or subsituting all ingredients that are not vegan
 		"""
-		pass
+		# start by making vegetarian
+		self.to_vegetarian()
+
+		# do additional transformations
 
 
 	def from_vegan(self):
 		"""
+		Transforms the recipe to be non-vegan by adding ingredients that are not vegan
 		"""
-		pass
+		# start by adding random meat
+		self.from_vegetarian()
+
+		# do more additions (i.e. add dairy etc)
 
 
 	def to_vegetarian(self):
