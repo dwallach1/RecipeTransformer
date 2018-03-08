@@ -3,9 +3,11 @@
 This python module takes in a URL pointing to a recipe from AllRecipes.com. It then promps the user to identify any and all supported 
 transformations they would like to make to the recipe. These transformations can be any of the following 
 	
-* To and from vegetarian and/or vegan
-* Style of cuisine
-* To and from healthy (or perhaps even different types of healthy)
+* To and from vegetarian 
+* To and from vegan
+* To and from healthy 
+* To and from pescatarian
+* To Style of cuisine (i.e. to Thai)
 * DIY to easy
 * Cooking method (from bake to stir fry, for example)
 
@@ -83,6 +85,8 @@ recipe_vegan.print_pretty()				# print the new recipe
 		<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* S --> Sauce
 		<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* P --> Pescatarian (Seafood)
+		<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;		* ? --> Misc.
 		<br />
 		<br />
@@ -104,6 +108,8 @@ The following are the methods of the Recipe class
 * from_vegan() - replaces vegan ingredients with non-vegan ingredients like meat, dairy, ect. 
 * to_vegetarian() - replaces non-vegetarian ingredients (meat) with vegetarian substitutes such as tofu and such. Updates the instructions and times accordingly
 * from_vegetarian() - adds a random meat to the recipe and updates the instructions and times
+* to_pescatarian() - replaces meats with seafood and/or adds new seafood ingredients to the recipe
+* from_pescatarian() - replaces seafood with meat and/or adds new meat ingredients to the recipe
 * to_style(style, threshold=1.0) - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
 
 
