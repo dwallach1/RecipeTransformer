@@ -27,11 +27,12 @@ import json
 from urlparse import urlparse
 from collections import defaultdict
 from operator import itemgetter
+import textwrap
+import copy
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
-import textwrap
-import copy
+
  
 
 DEBUG = False
@@ -65,8 +66,6 @@ healthy_substitutes = {
 
 }
 
-
-
 dairy_substitutes = {
 	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
 	# the quantities are just for parsing, they are updated to be the amount used of the unhealthy version in the recipe
@@ -82,14 +81,23 @@ dairy_substitutes = {
 
 # do not need a dict because we switch based on 'type' attribute instead of 'name' attribute
 meat_substitutes = [
-			'1 cup Tofu', 
-			'1 cup ICantBelieveItsNotMeat'
+			'12 ounces of Tofu', 
+			'1 cup ICantBelieveItsNotMeat',
+			'12 ounces of Tempeh',
+			'12 ounces of grilled Seitan',
+			'8 ounces of textured vegetable protien',
+			'12 ounces of gluten-free vegan meat',
+			'4 cups of Jackfruit',
+			'3 large portobello mushrooms',
+			'4 cups of lentils',
+			'4 cups of legumes'
 	]
 
 # use Tuples to tag the substitutes
 unhealthy_substitutes = [
 		('1 pound of fried chicken', 'M'), 
-		('3 fried eggplants', 'V')
+		('3 fried eggplants', 'V'),
+
 
 	]
 
@@ -150,17 +158,22 @@ class Ingredient(object):
 
 	def __str__(self):
 		"""
+		String representation of an Ingredient instance
 		"""
 		return self.name
 
 
 	def __repr__(self):
 		"""
+		How a Ingredient object is represented
 		"""
 		return self.name
 
 
 	def __eq__(self, other):
+		"""
+		Defines what makes two Ingredient instances equal
+		"""
 	    if isinstance(self, other.__class__):
 	        return self.__dict__ == other.__dict__
 	    return False
@@ -315,6 +328,7 @@ class Instruction(object):
 
 	def update_instruction(self):
 		"""
+		Uses the instances word list to update the objects instruction attribute
 		"""
 		self.instruction = ' '.join(self.instruction_words)
 
