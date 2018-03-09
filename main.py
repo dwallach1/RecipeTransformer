@@ -3,15 +3,21 @@ Recipe Transformer Project
 
 Given a URL to a recipe from AllRecipes.com, this program uses Natural Language Processing to transform any recipe, based on
 user's input, into any or all of the following categories:  
-	*   To and from vegetarian and/or vegan
-	*   Style of cuisine
-	*   To and from healthy (or perhaps even different types of healthy)
-	*   DIY to easy
-	*   Cooking method (from bake to stir fry, for example)
+	* To and from vegetarian 
+	* To and from vegan
+	* To and from healthy 
+	* To and from pescatarian
+	* To Style of cuisine (i.e. to Thai)
+	* DIY to easy
+	* Cooking method (from bake to stir fry, for example)
 
 
 Authors: 
  	* David Wallach
+ 	* Junhao Li
+
+
+ github repository: https://github.com/dwallach1/RecipeTransformer
 
 """
 import time
@@ -59,11 +65,7 @@ healthy_substitutes = {
 
 }
 
-unhealthy_substitutes = {
-	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
-	# the quantities are just for parsing, they are updated to be the amount used of the unhealthy version in the recipe
-	# inside the Recipe to_healthy method
-}
+
 
 dairy_substitutes = {
 	# The way this dict is structures is so that the values are used to easily instatiate new Ingredient objects 
@@ -79,7 +81,18 @@ dairy_substitutes = {
 }
 
 # do not need a dict because we switch based on 'type' attribute instead of 'name' attribute
-meat_substitutes = ['1 cup Tofu', '1 cup ICantBelieveItsNotMeat']
+meat_substitutes = [
+			'1 cup Tofu', 
+			'1 cup ICantBelieveItsNotMeat'
+	]
+
+# use Tuples to tag the substitutes
+unhealthy_substitutes = [
+		('1 pound of fried chicken', 'M'), 
+		('3 fried eggplants', 'V')
+
+	]
+
 
 # build list dynamically from wikipedia using the build_dynamic_lists() function -- used to tag the domain of an ingredient
 sauce_list = []
@@ -426,15 +439,21 @@ class Recipe(object):
 	def from_healthy(self):
 		"""
 		Transforms the recipe to a less healthy (more delicous) version by adding unhealthy ingredients and/or replacing 
-		healthy ingredients
+		healthy ingredients with unhealthy ingredients from the global unhealthy_substitutes list
 		"""
 		for i, ingredient in enumerate(self.ingredients):
-			if any(name in ingredient.name.split(' ') for name in unhealthy_substitutes.keys()):
-				key = next(name for name in ingredient.name.split(' ') if name in unhealthy_substitutes.keys())
-				unhealthy_sub = Ingredient(healthy_substitutes[key])
-				unhealthy_sub.quantity = ingredient.quantity
-				self.swap_ingredients(self.ingredients[i], unhealthy_sub)
-		
+			if ingredient.type == 'V':
+				candidates = filter(lambda sub: sub[1] == 'V', unhealthy_substitutes)
+				idx = random.randint(0, len(candidates) - 1)
+				new_ingredient = Ingredient(candidates[idx][0])
+				self.swap_ingredients(ingredient, new_ingredient)
+			if ingredient.type == 'M':
+				candidates = filter(lambda sub: sub[1] == 'M', unhealthy_substitutes)
+				idx = random.randint(0, len(candidates) - 1)
+				new_ingredient = Ingredient(candidates[idx][0])
+				self.swap_ingredients(ingredient, new_ingredient)
+
+
 		self.name = self.name + ' (unhealthy)'
 		
 
@@ -992,17 +1011,21 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	test_url = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
-	# test_url = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	# test_url = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
-	recipe_attrs = parse_url(test_url)
+	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
 
 	recipe.to_vegan()
-	# recipe.from_vegetarian()
+	# recipe.from_vegan()
 	# recipe.to_vegetarian()
+	# recipe.from_vegetarian()
+	# recipe.to_pescatarian()
+	# recipe.from_pescatarian()
 	# recipe.to_healthy()
+	# recipe.from_healthy()
 	# recipe.to_style('Mexican')
 	recipe.print_pretty()
 	recipe.compare_to_original()
