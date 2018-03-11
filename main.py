@@ -97,6 +97,7 @@ meat_substitutes = [
 unhealthy_substitutes = [
 		('1 pound of fried chicken', 'M'), 
 		('3 fried eggplants', 'V'),
+		('10 fried pickles', 'V')
 
 
 	]
@@ -174,9 +175,9 @@ class Ingredient(object):
 		"""
 		Defines what makes two Ingredient instances equal
 		"""
-	    if isinstance(self, other.__class__):
-	        return self.__dict__ == other.__dict__
-	    return False
+		if isinstance(self, other.__class__):
+			return self.__dict__ == other.__dict__
+		return False
 
 
 	def find_name(self, description):
@@ -306,7 +307,7 @@ class Instruction(object):
 			if re.search(method_indicator_regex, word):
 				cooking_methods.append(instruction[i])
 
-		cooking_methods.extend([word[0] for word in tags if word[1] in ['VB', 'VBD']])
+		# cooking_methods.extend([word[0] for word in tags if word[1] in ['VB', 'VBD']])
 			
 		return cooking_methods
 
@@ -365,7 +366,7 @@ class Recipe(object):
 		return list(set(cooking_tools)), list(set(cooking_methods))
 		
 
-	def print_pretty(self, original=False):
+	def to_JSON(self, original=False):
 		"""
 		convert representation to easily parseable JSON format
 		"""
@@ -382,29 +383,13 @@ class Recipe(object):
 			ing_list.append(ing_attrs)
 
 		data['ingredients'] = ing_list
+		data['instructions'] = [inst.instruction for inst in self.instructions]
 		parsed = json.dumps(data, indent=4, sort_keys=True)
-		print (parsed)
+		# print (parsed)
 		return parsed
 
 
-	def compare_to_original(self):
-		"""
-		Compares the current recipe to the original recipe the object was instatiated with.
-		If no changes were made, then they will be identical. 
-		"""
-		print ('-----------------------')
-		print ('The following changes were made to the original recipe: ')
-		if len(self.original_recipe.ingredients) < len(self.ingredients):
-			for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
-				print ('* added {}'.format(self.ingredients[i].name))
-		else:
-			for i in range(len(self.original_recipe.ingredients)):
-				if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
-					print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
-		print ('-----------------------')
-
-
-	def print_recipe(self):
+	def print_pretty(self):
 		"""
 		print a human friendly version of the recipe
 		"""
@@ -434,6 +419,23 @@ class Recipe(object):
 		print('\nInstructions:')
 		for i, t_inst in enumerate(self.text_instructions[:-1]):
 			print(textwrap.fill('{}. {}'.format(i+1, t_inst), 80))
+
+
+	def compare_to_original(self):
+		"""
+		Compares the current recipe to the original recipe the object was instatiated with.
+		If no changes were made, then they will be identical. 
+		"""
+		print ('-----------------------')
+		print ('The following changes were made to the original recipe: ')
+		if len(self.original_recipe.ingredients) < len(self.ingredients):
+			for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
+				print ('* added {}'.format(self.ingredients[i].name))
+		else:
+			for i in range(len(self.original_recipe.ingredients)):
+				if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
+					print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
+		print ('-----------------------')
 
 
 	def to_healthy(self):
@@ -1032,7 +1034,7 @@ def main():
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
 
-	recipe.to_vegan()
+	# recipe.to_vegan()
 	# recipe.from_vegan()
 	# recipe.to_vegetarian()
 	# recipe.from_vegetarian()
@@ -1040,10 +1042,11 @@ def main():
 	# recipe.from_pescatarian()
 	# recipe.to_healthy()
 	# recipe.from_healthy()
-	# recipe.to_style('Mexican')
-	recipe.print_pretty()
+	recipe.to_style('Thai')
+	print(recipe.to_JSON())
 	recipe.compare_to_original()
 
+	# recipe.print_recipe()
 
 
 if __name__ == "__main__":
