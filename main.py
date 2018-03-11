@@ -460,13 +460,11 @@ class Recipe(object):
 		for i, ingredient in enumerate(self.ingredients):
 			if ingredient.type == 'V':
 				candidates = filter(lambda sub: sub[1] == 'V', unhealthy_substitutes)
-				idx = random.randint(0, len(candidates) - 1)
-				new_ingredient = Ingredient(candidates[idx][0])
+				new_ingredient = Ingredient(random.choice(candidates)[0])
 				self.swap_ingredients(ingredient, new_ingredient)
 			if ingredient.type == 'M':
 				candidates = filter(lambda sub: sub[1] == 'M', unhealthy_substitutes)
-				idx = random.randint(0, len(candidates) - 1)
-				new_ingredient = Ingredient(candidates[idx][0])
+				new_ingredient = Ingredient(random.choice(candidates)[0])
 				self.swap_ingredients(ingredient, new_ingredient)
 
 
@@ -500,8 +498,7 @@ class Recipe(object):
 		self.from_vegetarian()
 
 		# find random dairy
-		idx = random.randint(0, len(dairy_list) - 1)
-		dairy = dairy_list[idx]
+		dairy = random.choice(dairy_list)
 
 		# add it to the ingredients list
 		self.ingredients.append(Ingredient('3 cups of {}'.format(dairy)))
@@ -520,8 +517,7 @@ class Recipe(object):
 
 		for i, ingredient in enumerate(self.ingredients):
 			if ingredient.type == 'M':
-				idx = random.randint(0, len(meat_substitutes) - 1)
-				meat_sub = Ingredient(meat_substitutes[idx])
+				meat_sub = Ingredient(random.choice(meat_substitutes))
 				meat_sub.quantity = ingredient.quantity
 				self.swap_ingredients(self.ingredients[i], meat_sub)
 		
@@ -565,16 +561,14 @@ class Recipe(object):
 		swapped = False
 		for i, ingredient in enumerate(self.ingredients):
 			if ingredient.type == 'M':
-				idx = random.randint(0, len(seafood_list) - 1)
-				seafood_sub = Ingredient('3 cups of {}'.format(seafood_list[idx]))
+				seafood_sub = Ingredient('3 cups of {}'.format(random.choice(seafood_list)))
 				seafood_sub.quantity = ingredient.quantity
 				self.swap_ingredients(self.ingredients[i], seafood_sub)
 				swapped = True
 
 		if not swapped:
 			# augment the recipe instead of swapping because no meats in the recipe
-			idx = random.randint(0, len(seafood_list) - 1)
-			seafood_ing = Ingredient('3 cups of {}'.format(seafood_list[idx]))
+			seafood_ing = Ingredient('3 cups of {}'.format(random.choice(seafood_list)))
 			self.ingredients.append(seafood_ing)
 
 			grill_seafood = 'Place the {} in a non-stick pan and fill the pan with oil.'.format(seafood_ing.name) \
@@ -602,8 +596,7 @@ class Recipe(object):
 		"""
 		for i, ingredient in enumerate(self.ingredients):
 			if ingredient.type == 'P':
-				idx = random.randint(0, len(meat_substitutes) - 1)
-				meat_sub = Ingredient(meat_substitutes[idx])
+				meat_sub = Ingredient(random.choice(meat_substitutes))
 				meat_sub.quantity = ingredient.quantity
 				self.swap_ingredients(self.ingredients[i], meat_sub)
 		
@@ -681,20 +674,20 @@ class Recipe(object):
 
 
 		# Find out most common ingredients from all recipes of type 'style' -- then decide which to switch and/or add to current recipe
-		try: most_common_sauce = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'S')
-		except StopIteration: most_common_sauce = None 
-		try: most_common_meat = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'M')
-		except StopIteration: most_common_meat = None
-		try: most_common_vegetable = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'V')
-		except StopIteration: most_common_vegetable = None
-		try: most_common_grain = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'G')
-		except StopIteration: most_common_grain = None
-		try: most_common_dairy = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'D')
-		except StopIteration: most_common_dairy = None
-		try: most_common_herb = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'H')
-		except StopIteration: most_common_herb = None
-		try: most_common_fruit = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'F')
-		except StopIteration: most_common_fruit = None
+		try: most_common_sauce = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'S'])
+		except IndexError: most_common_sauce = None 
+		try: most_common_meat = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'M'])
+		except IndexError: most_common_meat = None
+		try: most_common_vegetable = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'V'])
+		except IndexError: most_common_vegetable = None
+		try: most_common_grain = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'G'])
+		except IndexError: most_common_grain = None
+		try: most_common_dairy = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'D'])
+		except IndexError: most_common_dairy = None
+		try: most_common_herb = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'H'])
+		except IndexError: most_common_herb = None
+		try: most_common_fruit = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'F'])
+		except IndexError: most_common_fruit = None
 		
 
 		# switch the ingredients
@@ -749,8 +742,6 @@ class Recipe(object):
 						self.instructions[i].instruction_words[j+k] == ''
 					self.instructions[i].update_instruction()
 									
-		
-
 
 def remove_non_numerics(string): return re.sub('[^0-9]', '', string)
 
