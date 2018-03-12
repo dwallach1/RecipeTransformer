@@ -31,7 +31,7 @@ For grading purposes, here is what we completed:
 - [x] (optinal) Any input cuisine 
 - [x] Another Style of cuisine (OPTIONAL)
 - [x] to and from Pescatatian (OPTIONAL)
-- [] DIY to easy (OPTIONAL)
+- [ ] DIY to easy (OPTIONAL)
 
 
 
@@ -145,4 +145,9 @@ The following are the methods of the Recipe class
 * BeautifulSoup
 * NLTK
 * Requests
+
+
+# Program Architecture
+
+![./Program_Architecture.pdf](Program_Architecture)
 
