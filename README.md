@@ -7,9 +7,9 @@ transformations they would like to make to the recipe. These transformations can
 * To and from vegan
 * To and from healthy 
 * To and from pescatarian
-* To Style of cuisine (i.e. to Thai)
-* DIY to easy
-* Cooking method (from bake to stir fry, for example)
+* To Style of cuisine (i.e. to Thai, Mexican, Italian, etc.)
+* Cooking method (i.e. from bake to stirfry)
+
 
 The program then outputs a JSON representation of the new ingredients and changes made to the original recipe to accomplish these transformations. 
 
@@ -111,11 +111,16 @@ The following are the methods of the Recipe class
 * to_pescatarian() - replaces meats with seafood and/or adds new seafood ingredients to the recipe
 * from_pescatarian() - replaces seafood with meat and/or adds new meat ingredients to the recipe
 * to_style(style, threshold=1.0) - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
+* to_method(method) - transforms the cooking method to be like that method. For example, if passed `'fry'` as the method paramter's value, then it will add flour and oil to the recipe if not already there and fry the meats and vegetables.
+<br />
+* print_pretty() - used to print the attributes of the recipe in an easy to read format
+* to_JSON() - used to export the recipe class to a JSON format
+* compare_to_original() - shows the additions and/or changes reflected in the current recipe from the recipe that the object was instatiated with
 
 
 # Dependencies 
 
-* Used Python2.7 but works with Python3 as well. 
+* Used Python2.7 but works with Python3 as well
 * BeautifulSoup
 * NLTK
 * Requests
