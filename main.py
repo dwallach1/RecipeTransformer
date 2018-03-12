@@ -2,13 +2,15 @@
 Recipe Transformer Project
 
 Given a URL to a recipe from AllRecipes.com, this program uses Natural Language Processing to transform any recipe, based on
-user's input, into any or all of the following categories:  
+user's input, into any of the following categories:  
 	* To and from vegetarian 
 	* To and from vegan
 	* To and from healthy 
 	* To and from pescatarian
 	* To Style of cuisine (i.e. to Thai)
-	* DIY to easy
+
+	------------ (yet to implement)
+	* DIY to easy    (what does this even mean?)
 	* Cooking method (from bake to stir fry, for example)
 
 
@@ -101,6 +103,17 @@ unhealthy_substitutes = [
 
 
 	]
+
+# used for the to_method(cooking_method) method
+methods = {
+
+	'bake': [('2 tablespoons of oil', 'S')],
+
+	'fry': 	[('2 tablespoons of oil', 'S')],
+
+	'stirfry': [('2 tablespoons of oil', 'S'),
+				('4 cups of broccoli', 'V')]
+}
 
 
 # build list dynamically from wikipedia using the build_dynamic_lists() function -- used to tag the domain of an ingredient
@@ -531,8 +544,7 @@ class Recipe(object):
 		"""
 
 		# find a random meat from the meat_list to add
-		idx = random.randint(0, len(meat_list) - 1)
-		meat = meat_list[idx]
+		meat = random.choice(meat_list)
 		self.ingredients.append(Ingredient('3 cups of boiled {}'.format(meat)))
 
 
@@ -708,6 +720,63 @@ class Recipe(object):
 
 		# update name
 		self.name = self.name + ' (' + style + ')'
+
+
+	def to_method(self, method):
+		"""
+		Transforms the recipe into using a method. The supported methods are
+
+			* fry  (i.e. fried chicken)
+			* stirfry 
+			* bake
+
+		If the method parameter is passed an unsupported value, an error message will be displayed and no
+		transformation will be made to the recipe object. 
+		"""
+
+		if not method in methods.keys():
+			print ('Error in to_method call. {} method is not yet supported.\n \
+				please look at documentation for supported methods'.format(method))
+			return 
+
+		if method == 'fry':
+			meats = [ingredient for ingredient in self.ingredients if ingredient.type == 'M']
+			if not len(meats):
+				# add meat if there is no meat in the recipe
+				meat = Ingredient('10 ounces of {}'.format(random.choice(meat_list)))
+				self.ingredients.append(meat)
+
+			else:
+				meat = meats[0]
+
+			# add flour if there is no flour in the recipe already 
+			flour = [ingredient for ingredient in self.ingredients if 'flour' in ingredient.name.lower().split(' ')]
+			if not len(flour):
+				self.ingredients.append(Ingredient('1 1/2 cups of flour'))
+			
+
+			# add oil if there is no oil in the recipe already
+			oil = [ingredient for ingredient in self.ingredients if 'oil' in ingredient.name.lower().split(' ')]
+			if not len(flour):
+				self.ingredients.append(Ingredient('2 quarts of vegetable oil'))
+
+			# add necessary instructions
+			instruction = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} pieces to taste, then roll in flour to coat. \
+			Place {0} pieces in skillet and fry on medium heat until one side is golden brown, \
+			then turn and brown other side until {0} is no longer pink inside and its juices run clear.'.format(meat.name)
+
+			self.instructions.insert(-1, Instruction(instruction))
+
+
+		# else if method == 'stirfry'
+
+		# otherwise it must be 'bake' due to process of elimination
+		# else:
+
+
+
+		self.name = self.name + ' ( ' + method + ' )'
+
 
 
 	def freq_dist(self, data):
@@ -1015,12 +1084,13 @@ def main():
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
+
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
@@ -1033,11 +1103,12 @@ def main():
 	# recipe.from_pescatarian()
 	# recipe.to_healthy()
 	# recipe.from_healthy()
-	recipe.to_style('Thai')
+	# recipe.to_style('Thai')
+	recipe.to_method('fry')
 	print(recipe.to_JSON())
 	recipe.compare_to_original()
 
-	# recipe.print_recipe()
+	# recipe.print_pretty()
 
 
 if __name__ == "__main__":
