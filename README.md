@@ -104,18 +104,17 @@ recipe_vegan.print_pretty()				# print the new recipe
 
 The following are the methods of the Recipe class
 
-* to_vegan() - replaces non-vegan ingredients (meat, dairy, ect.) with vegan substitutes
-* from_vegan() - replaces vegan ingredients with non-vegan ingredients like meat, dairy, ect. 
-* to_vegetarian() - replaces non-vegetarian ingredients (meat) with vegetarian substitutes such as tofu and such. Updates the instructions and times accordingly
-* from_vegetarian() - adds a random meat to the recipe and updates the instructions and times
-* to_pescatarian() - replaces meats with seafood and/or adds new seafood ingredients to the recipe
-* from_pescatarian() - replaces seafood with meat and/or adds new meat ingredients to the recipe
-* to_style(style, threshold=1.0) - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
-* to_method(method) - transforms the cooking method to be like that method. For example, if passed `'fry'` as the method paramter's value, then it will add flour and oil to the recipe if not already there and fry the meats and vegetables.
-<br />
-* print_pretty() - used to print the attributes of the recipe in an easy to read format
-* to_JSON() - used to export the recipe class to a JSON format
-* compare_to_original() - shows the additions and/or changes reflected in the current recipe from the recipe that the object was instatiated with
+* **to_vegan()** - replaces non-vegan ingredients (meat, dairy, ect.) with vegan substitutes
+* **from_vegan()** - replaces vegan ingredients with non-vegan ingredients like meat, dairy, ect. 
+* **to_vegetarian()** - replaces non-vegetarian ingredients (meat) with vegetarian substitutes such as tofu and such. Updates the instructions and times accordingly
+* **from_vegetarian()** - adds a random meat to the recipe and updates the instructions and times
+* **to_pescatarian()** - replaces meats with seafood and/or adds new seafood ingredients to the recipe
+* **from_pescatarian()** - replaces seafood with meat and/or adds new meat ingredients to the recipe
+* **to_style(style, threshold=1.0)** - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
+* **to_method(method)** - transforms the cooking method to be like that method. For example, if passed `'fry'` as the method paramter's value, then it will add flour and oil to the recipe if not already there and fry the meats and vegetables.
+* **print_pretty()** - used to print the attributes of the recipe in an easy to read format
+* **to_JSON()** - used to export the recipe class to a JSON format
+* **compare_to_original()** - shows the additions and/or changes reflected in the current recipe from the recipe that the object was instatiated with
 
 
 # Dependencies 
