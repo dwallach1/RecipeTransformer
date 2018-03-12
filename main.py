@@ -294,6 +294,7 @@ class Instruction(object):
 		self.cooking_tools = self.find_tools(self.instruction_words)
 		self.cooking_methods = self.find_methods(self.instruction_words)
 		self.time = self.find_time(self.instruction_words)
+		self.ingredients = None
 
 
 	def find_tools(self, instruction):
@@ -361,6 +362,7 @@ class Recipe(object):
 		self.ingredients = [Ingredient(ing) for ing in self.ingredients]		# store ingredients in Ingredient objects
 		self.instructions = [Instruction(inst) for inst in self.instructions]	# store instructions in Instruction objects
 		self.cooking_tools, self.cooking_methods  = self.parse_instructions()	# get aggregate tools and methods apparent in all instructions
+		self.update_instructions()			# as part of the steps requirement, add the associated ingredients to each instruction step
 
 		# save original copy to compare with the transformations
 		self.original_recipe = copy.deepcopy(self)
@@ -377,7 +379,17 @@ class Recipe(object):
 			cooking_tools.extend(inst.cooking_tools)
 			cooking_methods.extend(inst.cooking_methods)
 		return list(set(cooking_tools)), list(set(cooking_methods))
-		
+	
+
+	def update_instructions(self):
+		"""
+		To convert instructions into steps, we need to store the associated ingredients as part an attribute for 
+		each instruction. This method does that update
+		"""
+		for i, instruction in enumerate(self.instructions):
+			ingredients = [ingredient for ingredient in self.ingredients if instruction.instruction.find(ingredient.name) >= 0]
+			self.instructions[i].ingredients = ingredients
+
 
 	def to_JSON(self, original=False):
 		"""
@@ -760,22 +772,48 @@ class Recipe(object):
 			if not len(flour):
 				self.ingredients.append(Ingredient('2 quarts of vegetable oil'))
 
+
+			# find if there are vegetables
+			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
+
 			# add necessary instructions
-			instruction = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} pieces to taste, then roll in flour to coat. \
-			Place {0} pieces in skillet and fry on medium heat until one side is golden brown, \
+			instruction_meat = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
+			Place {0} in skillet and fry on medium heat until one side is golden brown, \
 			then turn and brown other side until {0} is no longer pink inside and its juices run clear.'.format(meat.name)
 
-			self.instructions.insert(-1, Instruction(instruction))
+			if len(vegetables):
+				instruction_vegetables = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
+				Place {0} in skillet and fry on medium heat until crispy.'.format(' and '.join([v.name for v in vegetables]))
+				self.instructions.insert(-1, Instruction(instruction_vegetables))
 
 
-		# else if method == 'stirfry'
+			self.instructions.insert(-1, Instruction(instruction_meat))
+
+
+		elif method == 'stirfry':
+
+			# make sure there are vegetables 
+			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
+			if len(vegetables) < 5:
+				for _ in range(5 - len(vegetables)):
+					self.ingredients.append(Ingredient('{} cups of {}'.format(random.randint(1,4), random.choice(vegetable_list))))
+
+			# add sesame oil and soy sauce to stirfry the vegetables
+			self.ingredients.append(Ingredient('1 tablespoon of sesame oil'))
+			self.ingredients.append(Ingredient('2 tablespoons of soy sauce'))
+
+			instruction_vegetables = 'Heat 1 tablespoon sesame oil in a large skillet over medium-high heat. Cook and \
+			stir {} until just tender, about 5 minutes. \
+			Remove vegetables from skillet and keep warm.'.format(' and '.join([v.name for v in vegetables]))
+
+			self.instructions.insert(-1, Instruction(instruction_vegetables))
 
 		# otherwise it must be 'bake' due to process of elimination
 		# else:
 
 
 
-		self.name = self.name + ' ( ' + method + ' )'
+		self.name = self.name + ' (' + method + ' )'
 
 
 
@@ -1089,8 +1127,8 @@ def main():
 	build_dynamic_lists()
 
 	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
-	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
@@ -1104,7 +1142,7 @@ def main():
 	# recipe.to_healthy()
 	# recipe.from_healthy()
 	# recipe.to_style('Thai')
-	recipe.to_method('fry')
+	recipe.to_method('stirfry')
 	print(recipe.to_JSON())
 	recipe.compare_to_original()
 
