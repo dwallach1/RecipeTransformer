@@ -149,5 +149,5 @@ The following are the methods of the Recipe class
 
 # Program Architecture
 
-![./Program_Architecture.pdf](Program_Architecture)
+![Program_Architecture.pdf](Program_Architecture)
 
