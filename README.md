@@ -13,6 +13,28 @@ transformations they would like to make to the recipe. These transformations can
 
 The program then outputs a JSON representation of the new ingredients and changes made to the original recipe to accomplish these transformations. 
 
+For grading purposes, here is what we completed:
+ 
+
+- [x] Ingredient name
+- [x] Quantity
+- [x] Measurement (cup, teaspoon, pinch, etc.)
+- [x] (optional) Descriptor (e.g. fresh, extra-virgin)
+- [x] (optional) Preparation (e.g. finely chopped)
+- [x] Tools – pans, graters, whisks, etc.
+- [x] Primary cooking method (e.g. sauté, broil, boil, poach, etc.)
+- [x] (optional) Other cooking methods used (e.g. chop, grate, stir, shake, mince, crush, squeeze, etc.)
+- [x] (optional) Steps – parse the directions into a series of steps that each consist of ingredients, tools, methods, and times
+- [x] To and from vegetarian (REQUIRED)
+- [x] To and from healthy (REQUIRED)
+- [x] Style of cuisine (AT LEAST ONE REQUIRED) 
+- [x] (optinal) Any input cuisine 
+- [x] Another Style of cuisine (OPTIONAL)
+- [x] to and from Pescatatian (OPTIONAL)
+- [] DIY to easy (OPTIONAL)
+
+
+
 
 # Usage 
 
