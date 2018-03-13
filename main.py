@@ -8,9 +8,6 @@ user's input, into any of the following categories:
 	* To and from healthy 
 	* To and from pescatarian
 	* To Style of cuisine (i.e. to Thai)
-
-	------------ (yet to implement)
-	* DIY to easy    (what does this even mean?)
 	* Cooking method (from bake to stir fry, for example)
 
 
@@ -27,25 +24,29 @@ import random
 import re
 import json
 from urlparse import urlparse
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from operator import itemgetter
 import textwrap
 import copy
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
-
  
 
 DEBUG = False
 
 
 # simple regex used to find specific attributes in strings 
-measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound)'
-tool_indicator_regex = '(pan |skillet|pot |sheet|grate|whisk)'
-method_indicator_regex = '(boil|bake|simmer|stir)'
+measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices)'
+tool_indicator_regex = '(pan|skillet|pot|sheet|grate|whisk|griddle|bowl)'
+method_indicator_regex = '(boil|bake|baking|simmer|stir)'
 heat_method_indicator_regex = ('boil|bake|simmer|stir')
-time_indicator_regex = '(min)'
+time_indicator_regex = '(min|hour)'
+
+# these are used as last measures to sort out names, descriptors, and preperation words that our system is having trouble parsing
+descriptor_regex = '(color|mini|container|package|skin|bone|halves)'
+preperation_regex = '(room|temperature)'
+names_regex = '(garlic|poppy|baking|sour)'
 
 
 
@@ -97,23 +98,13 @@ meat_substitutes = [
 
 # use Tuples to tag the substitutes
 unhealthy_substitutes = [
-		('1 pound of fried chicken', 'M'), 
+		('1 pound of fried chicken', 'M'),
+		('4 pieces of milanesa', 'M'),
 		('3 fried eggplants', 'V'),
 		('10 fried pickles', 'V')
 
 
 	]
-
-# used for the to_method(cooking_method) method
-methods = {
-
-	'bake': [('2 tablespoons of oil', 'S')],
-
-	'fry': 	[('2 tablespoons of oil', 'S')],
-
-	'stirfry': [('2 tablespoons of oil', 'S'),
-				('4 cups of broccoli', 'V')]
-}
 
 
 # build list dynamically from wikipedia using the build_dynamic_lists() function -- used to tag the domain of an ingredient
@@ -197,7 +188,11 @@ class Ingredient(object):
 		"""
 		looks for name of the ingredient from the desciption. Finds the nouns that are not measurements
 		"""
-		name = [d[0] for d in description if (d[1] == 'NN' or d[1] == 'NNS' or d[1] == 'NNP') and not re.search(measure_regex, d[0])]
+		name = [d[0] for d in description if ((d[1] == 'NN' or d[1] == 'NNS' or d[1] == 'NNP') 
+													and not re.search(measure_regex, d[0], flags=re.I)
+													and not re.search(descriptor_regex, d[0], flags=re.I)
+													and not re.search(preperation_regex, d[0], flags=re.I))
+											or re.search(names_regex, d[0], re.I)]
 		if len(name) == 0:
 			return description[-1][0]
 		return ' '.join(name)
@@ -230,7 +225,7 @@ class Ingredient(object):
 		looks for measurements such as cups, teaspoons, etc. 
 		Uses measure_regex which is a compilation of possible measurements.
 		"""
-		measurement = [d[0] for d in description if re.search(measure_regex, d[0])]
+		measurement = [d[0] for d in description if re.search(measure_regex, d[0], flags=re.I)]
 		return ' '.join(measurement)
 	
 
@@ -239,8 +234,8 @@ class Ingredient(object):
 		looks for descriptions such as fresh, extra-virgin by finding describing words such as
 		adjectives
 		"""
-		# return candidates
-		descriptors = [d[0] for d in description if (d[1] == 'JJ' or d[1] == 'RB') and not re.search(measure_regex, d[0])]
+		descriptors = [d[0] for d in description if ((d[1] == 'JJ' or d[1] == 'RB') and not re.search(measure_regex, d[0], flags=re.I))
+													or re.search(descriptor_regex, d[0], flags=re.I)]
 		return descriptors
 
 
@@ -248,7 +243,7 @@ class Ingredient(object):
 		"""
 		find all preperations (finely, chopped) by finding action words such as verbs 
 		"""
-		preperations = [d[0] for d in description if d[1] == 'VB' or d[1] == 'VBD']
+		preperations = [d[0] for d in description if d[1] == 'VB' or d[1] == 'VBD' or re.search(preperation_regex, d[0], flags=re.I)]
 		for i, p in enumerate(preperations):
 			if p == 'taste':
 				preperations[i] = 'to taste'
@@ -270,6 +265,11 @@ class Ingredient(object):
 
 		ordered by precedence of how telling the classification is --> bound to one classification
 		"""
+
+		# special cases:
+		if self.name.lower().find('sauce') >= 0: return 'S'
+
+		# normal execution:
 		types = ''
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in meat_list) and len(types) == 0: types ='M' 
 		if any(set(self.name.lower().split(' ')).intersection(set(example.lower().split(' '))) for example in vegetable_list) and len(types) == 0: types = 'V'
@@ -297,31 +297,29 @@ class Instruction(object):
 		self.ingredients = None
 
 
-	def find_tools(self, instruction):
+	def find_tools(self, instruction_words):
 		"""
 		looks for any and all cooking tools apparent in the instruction text by using the tool_indicator_regex
 		variable
 		"""
 		cooking_tools = []
-		for i, word in enumerate(instruction):
-			if re.search(tool_indicator_regex, word):
-				cooking_tools.append(instruction[i])
+		for word in instruction_words:
+			if re.search(tool_indicator_regex, word, flags=re.I):
+				cooking_tools.append(word)
 			
 		return cooking_tools
 
 
-	def find_methods(self, instruction):
+	def find_methods(self, instruction_words):
 		"""
 		looks for any and all cooking methods apparent in the instruction text by using the method_indicator_regex
 		variable
 		"""
 		cooking_methods = []
-		tags = pos_tag(instruction)
-		for i, word in enumerate(instruction):
-			if re.search(method_indicator_regex, word):
-				cooking_methods.append(instruction[i])
+		for word in instruction_words:
+			if re.search(method_indicator_regex, word, flags=re.I):
+				cooking_methods.append(word)
 
-		# cooking_methods.extend([word[0] for word in tags if word[1] in ['VB', 'VBD']])
 			
 		return cooking_methods
 
@@ -333,9 +331,15 @@ class Instruction(object):
 		"""
 		time = 0
 		for i, word in enumerate(instruction):
-			if re.search(time_indicator_regex, word):
+			# if we are talking about degrees, then extracting numbers are not associated with time
+			if word == 'degrees': return 0
+			
+			if re.search(time_indicator_regex, word, flags=re.I):
 				try:
-					time += int(instruction[i-1])	
+					if re.search('(hour)', word, flags=re.I):
+						time += int(instruction[i-1]) * 60
+					else:
+						time += int(instruction[i-1])
 				except:
 					pass
 		return time
@@ -387,7 +391,7 @@ class Recipe(object):
 		each instruction. This method does that update
 		"""
 		for i, instruction in enumerate(self.instructions):
-			ingredients = [ingredient for ingredient in self.ingredients if instruction.instruction.find(ingredient.name) >= 0]
+			ingredients = [ingredient.name for ingredient in self.ingredients if instruction.instruction.find(ingredient.name) >= 0]
 			self.instructions[i].ingredients = ingredients
 
 
@@ -395,7 +399,7 @@ class Recipe(object):
 		"""
 		convert representation to easily parseable JSON format
 		"""
-		data = {}
+		data = OrderedDict()
 		if original: self = self.original_recipe
 		data['name'] = self.name
 		data['cooking tools'] = self.cooking_tools
@@ -408,9 +412,19 @@ class Recipe(object):
 			ing_list.append(ing_attrs)
 
 		data['ingredients'] = ing_list
-		data['instructions'] = [inst.instruction for inst in self.instructions]
-		parsed = json.dumps(data, indent=4, sort_keys=True)
-		# print (parsed)
+
+		inst_list = []
+		for instruction in self.instructions:
+			inst_attrs = {}
+			include = True
+			for attr, value in instruction.__dict__.iteritems():
+				if attr == 'instruction_words': continue
+				if attr == 'instruction' and len(value) == 0: include = False
+				inst_attrs[attr] = value
+			if include: inst_list.append(inst_attrs)
+
+		data['steps'] = inst_list
+		parsed = json.dumps(data, indent=4)
 		return parsed
 
 
@@ -745,8 +759,8 @@ class Recipe(object):
 		If the method parameter is passed an unsupported value, an error message will be displayed and no
 		transformation will be made to the recipe object. 
 		"""
-
-		if not method in methods.keys():
+		supported_methods = ['fry', 'stir-fry', 'bake']
+		if not method in supported_methods:
 			print ('Error in to_method call. {} method is not yet supported.\n \
 				please look at documentation for supported methods'.format(method))
 			return 
@@ -790,7 +804,7 @@ class Recipe(object):
 			self.instructions.insert(-1, Instruction(instruction_meat))
 
 
-		elif method == 'stirfry':
+		elif method == 'stir-fry':
 
 			# make sure there are vegetables 
 			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
@@ -808,13 +822,20 @@ class Recipe(object):
 
 			self.instructions.insert(-1, Instruction(instruction_vegetables))
 
+
 		# otherwise it must be 'bake' due to process of elimination
-		# else:
+		else:
+
+			begin_instruction = Instruction('Preheat oven to 350 degrees F (175 degrees C). Grease a 9x13-inch baking dish.')
+
+
+
+
+			self.instructions.insert(-1, begin_instruction)
 
 
 
 		self.name = self.name + ' (' + method + ' )'
-
 
 
 	def freq_dist(self, data):
@@ -1130,23 +1151,41 @@ def main():
 	URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
-	recipe_attrs = parse_url(URL)
-	recipe = Recipe(**recipe_attrs)
+	URLS = [
+		'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
+		'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
+		'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
+		'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
+		'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
+		'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
+		'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
+		'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+	]
+	for url in URLS:
+		recipe_attrs = parse_url(url)
+		recipe = Recipe(**recipe_attrs)
+		print(recipe.to_JSON())
 
-	# recipe.to_vegan()
-	# recipe.from_vegan()
-	# recipe.to_vegetarian()
-	# recipe.from_vegetarian()
-	# recipe.to_pescatarian()
-	# recipe.from_pescatarian()
-	# recipe.to_healthy()
-	# recipe.from_healthy()
-	# recipe.to_style('Thai')
-	recipe.to_method('stirfry')
-	print(recipe.to_JSON())
-	recipe.compare_to_original()
+	# recipe_attrs = parse_url(URL)
+	# recipe = Recipe(**recipe_attrs)
 
-	# recipe.print_pretty()
+	# # recipe.to_vegan()
+	# # recipe.from_vegan()
+	# # recipe.to_vegetarian()
+	# # recipe.from_vegetarian()
+	# # recipe.to_pescatarian()
+	# # recipe.from_pescatarian()
+	# # recipe.to_healthy()
+	# # recipe.from_healthy()
+	# # recipe.to_style('Thai')
+	# # recipe.to_style('Mexican')
+	# # recipe.to_method('stir-fry')
+	# # recipe.to_method('fry')
+	# print(recipe.to_JSON())
+	# # recipe.compare_to_original()
+	# # recipe.print_pretty()
 
 
 if __name__ == "__main__":
