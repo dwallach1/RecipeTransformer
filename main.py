@@ -37,7 +37,7 @@ DEBUG = False
 
 
 # simple regex used to find specific attributes in strings 
-measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices|pods|package|can|head)'
+measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices|pods|package|can|head|halves)'
 tool_indicator_regex = '(pan|skillet|pot|sheet|grate|whisk|griddle|bowl|oven|dish)'
 method_indicator_regex = '(boil|bake|baking|simmer|stir|roast|fry)'
 time_indicator_regex = '(min|hour)'
@@ -500,7 +500,6 @@ class Recipe(object):
 			for i in range(len(self.original_recipe.instructions)):
 				if self.original_recipe.instructions[i].instruction != self.instructions[i].instruction:
 					print ('* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction))
-		print ('-----------------------')
 		print ('-----------------------')
 
 
@@ -1212,33 +1211,34 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
-	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
-	
-	URLS = [
-		# 'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
-		# 'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
-		# 'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
-		# 'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
-		# 'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
-		# 'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
-		# 'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
-		# 'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
-		# 'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
+	URLS = [
+		'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
+		'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
+		'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
+		'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
+		'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
+		'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
+		'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
+		'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+		'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
 
 	]
+
 	# for url in URLS:
 	# 	recipe_attrs = parse_url(url)
 	# 	recipe = Recipe(**recipe_attrs)
