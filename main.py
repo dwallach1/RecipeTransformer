@@ -37,16 +37,16 @@ DEBUG = False
 
 
 # simple regex used to find specific attributes in strings 
-measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices)'
+measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices|pods|package|can|head)'
 tool_indicator_regex = '(pan|skillet|pot|sheet|grate|whisk|griddle|bowl)'
 method_indicator_regex = '(boil|bake|baking|simmer|stir)'
-heat_method_indicator_regex = ('boil|bake|simmer|stir')
+heat_method_indicator_regex = '(boil|bake|simmer|stir)'
 time_indicator_regex = '(min|hour)'
 
-# these are used as last measures to sort out names, descriptors, and preperation words that our system is having trouble parsing
-descriptor_regex = '(color|mini|container|package|skin|bone|halves)'
-preperation_regex = '(room|temperature)'
-names_regex = '(garlic|poppy|baking|sour)'
+# these are used as last resort measures to sort out names, descriptors, and preperation words that our system is having trouble parsing
+descriptor_regex = '(color|mini|container|skin|bone|halves|fine|parts|leftover)'
+preperation_regex = '(room|temperature|divided|sliced|dice|mince|chopped|quartered|cored|shredded|seperated)'
+names_regex = '(garlic|poppy|baking|sour|cream|broth|chicken|olive|mushroom|green)'
 
 
 
@@ -147,7 +147,7 @@ class Ingredient(object):
 
 		self.name = self.find_name(description_tagged)
 		self.quantity = self.find_quantity(description)				# do not use tagged description -- custom parsing for quantities
-		self.measurement = self.find_measurement(description_tagged)
+		self.measurement = self.find_measurement(description_tagged, description)
 		self.descriptor = self.find_descriptor(description_tagged)
 		self.preperation = self.find_preperation(description_tagged)
 		self.type = self.find_type()
@@ -184,17 +184,17 @@ class Ingredient(object):
 		return False
 
 
-	def find_name(self, description):
+	def find_name(self, description_tagged):
 		"""
 		looks for name of the ingredient from the desciption. Finds the nouns that are not measurements
 		"""
-		name = [d[0] for d in description if ((d[1] == 'NN' or d[1] == 'NNS' or d[1] == 'NNP') 
+		name = [d[0] for d in description_tagged if ((d[1] == 'NN' or d[1] == 'NNS' or d[1] == 'NNP') 
 													and not re.search(measure_regex, d[0], flags=re.I)
 													and not re.search(descriptor_regex, d[0], flags=re.I)
 													and not re.search(preperation_regex, d[0], flags=re.I))
 											or re.search(names_regex, d[0], re.I)]
 		if len(name) == 0:
-			return description[-1][0]
+			return description_tagged[-1][0]
 		return ' '.join(name)
 
 
@@ -220,30 +220,41 @@ class Ingredient(object):
 		return total
 
 
-	def find_measurement(self, description):
+	def find_measurement(self, description_tagged, description):
 		"""
 		looks for measurements such as cups, teaspoons, etc. 
 		Uses measure_regex which is a compilation of possible measurements.
 		"""
-		measurement = [d[0] for d in description if re.search(measure_regex, d[0], flags=re.I)]
-		return ' '.join(measurement)
-	
+		measurement = [d[0] for d in description_tagged if re.search(measure_regex, d[0], flags=re.I)]
+		m = ' '.join(measurement)
+		if re.search('package', m, flags=re.I):
+			extra = description[description.find("(")+1:description.find(")")]
+			return extra + ' package(s)'
+		if re.search('can', m, flags=re.I):
+			extra = description[description.find("(")+1:description.find(")")]
+			return extra + ' can(s)'
+		return m
 
-	def find_descriptor(self, description):
+
+	def find_descriptor(self, description_tagged):
 		"""
 		looks for descriptions such as fresh, extra-virgin by finding describing words such as
 		adjectives
 		"""
-		descriptors = [d[0] for d in description if ((d[1] == 'JJ' or d[1] == 'RB') and not re.search(measure_regex, d[0], flags=re.I))
-													or re.search(descriptor_regex, d[0], flags=re.I)]
+		descriptors = [d[0] for d in description_tagged if ( 
+															(d[1] == 'JJ' or d[1] == 'RB') 
+															and not re.search(measure_regex, d[0], flags=re.I)
+															and not re.search(names_regex, d[0], flags=re.I)
+														)
+														or re.search(descriptor_regex, d[0], flags=re.I)]
 		return descriptors
 
 
-	def find_preperation(self, description):
+	def find_preperation(self, description_tagged):
 		"""
 		find all preperations (finely, chopped) by finding action words such as verbs 
 		"""
-		preperations = [d[0] for d in description if d[1] == 'VB' or d[1] == 'VBD' or re.search(preperation_regex, d[0], flags=re.I)]
+		preperations = [d[0] for d in description_tagged if d[1] == 'VB' or d[1] == 'VBD' or re.search(preperation_regex, d[0], flags=re.I)]
 		for i, p in enumerate(preperations):
 			if p == 'taste':
 				preperations[i] = 'to taste'
@@ -307,7 +318,7 @@ class Instruction(object):
 			if re.search(tool_indicator_regex, word, flags=re.I):
 				cooking_tools.append(word)
 			
-		return cooking_tools
+		return list(set(cooking_tools))
 
 
 	def find_methods(self, instruction_words):
@@ -321,7 +332,7 @@ class Instruction(object):
 				cooking_methods.append(word)
 
 			
-		return cooking_methods
+		return list(set(cooking_methods))
 
 
 	def find_time(self, instruction):
@@ -392,7 +403,7 @@ class Recipe(object):
 		"""
 		for i, instruction in enumerate(self.instructions):
 			ingredients = [ingredient.name for ingredient in self.ingredients if instruction.instruction.find(ingredient.name) >= 0]
-			self.instructions[i].ingredients = ingredients
+			self.instructions[i].ingredients = list(set(ingredients))
 
 
 	def to_JSON(self, original=False):
@@ -402,6 +413,7 @@ class Recipe(object):
 		data = OrderedDict()
 		if original: self = self.original_recipe
 		data['name'] = self.name
+		data['url'] = self.url
 		data['cooking tools'] = self.cooking_tools
 		data['cooking method'] = self.cooking_methods
 		ing_list = []
@@ -955,7 +967,8 @@ def parse_url(url):
 			'fat': fat,
 			'protien': protien,
 			'cholesterol': cholesterol,
-			'sodium': sodium
+			'sodium': sodium,
+			'url': url
 			}
 
 
@@ -1152,16 +1165,26 @@ def main():
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
 	URLS = [
-		'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
-		'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
-		'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
-		'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
-		'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
-		'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
-		'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
-		'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+		# 'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
+		# 'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
+		# 'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
+		# 'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
+		# 'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
+		# 'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
+		# 'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
+		# 'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+
+		'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
+
 	]
 	for url in URLS:
 		recipe_attrs = parse_url(url)
