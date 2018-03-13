@@ -9,6 +9,7 @@ transformations they would like to make to the recipe. These transformations can
 * To and from pescatarian
 * To Style of cuisine (i.e. to Thai, Mexican, Italian, etc.)
 * Cooking method (i.e. from bake to stirfry)
+* DIY to easy 
 
 
 The program then outputs a JSON representation of the new ingredients and changes made to the original recipe to accomplish these transformations. 
@@ -28,10 +29,10 @@ For grading purposes, here is what we completed:
 - [x] To and from vegetarian (REQUIRED)
 - [x] To and from healthy (REQUIRED)
 - [x] Style of cuisine (AT LEAST ONE REQUIRED) 
-- [x] (optinal) Any input cuisine 
+- [x] (optional) Any input cuisine 
 - [x] Another Style of cuisine (OPTIONAL)
 - [x] to and from Pescatatian (OPTIONAL)
-- [ ] DIY to easy (OPTIONAL)
+- [x] DIY to easy (OPTIONAL)
 
 
 
@@ -48,7 +49,7 @@ recipe = Recipe(**recipe_attrs)			# instantiate the Recipe object by unpacking d
 
 # apply a transformation
 recipe_vegan = recipe.to_style('Mexican')	# convert the Creamy Mushroom Pasta to be Mexican style
-recipe_vegan.print_pretty()				# print the new recipe 
+print(recipe_vegan.to_JSON())				# print the new recipe 
 
 ```
 
@@ -149,5 +150,5 @@ The following are the methods of the Recipe class
 
 # Program Architecture
 
-![Program Architecture](/Program_Architecture.pdf)
+![Program Architecture](./Program_Architecture.pdf)
 
