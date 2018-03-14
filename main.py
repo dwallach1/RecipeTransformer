@@ -337,6 +337,8 @@ class Instruction(object):
 		for word in instruction_words:
 			if re.search(method_indicator_regex, word, flags=re.I):
 				cooking_methods.append(word)
+			if re.search('preheat', word, re.I):
+				cooking_methods.append('bake')
 
 		wordset = set(cooking_methods)
 		return [item for item in wordset if item.istitle() or item.title() not in wordset]
@@ -484,23 +486,26 @@ class Recipe(object):
 		Compares the current recipe to the original recipe the object was instatiated with.
 		If no changes were made, then they will be identical. 
 		"""
-		print ('-----------------------')
-		print ('The following changes were made to the original recipe: ')
-		if len(self.original_recipe.ingredients) < len(self.ingredients):
-			for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
-				print ('* added {}'.format(self.ingredients[i].name))
-		else:
-			for i in range(len(self.original_recipe.ingredients)):
-				if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
-					print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
-		if len(self.original_recipe.instructions) < len(self.instructions):
-			for i in range(len(self.original_recipe.instructions), len(self.instructions)):
-				print ('* added {}'.format(self.instructions[i].instruction))
-		else:
-			for i in range(len(self.original_recipe.instructions)):
-				if self.original_recipe.instructions[i].instruction != self.instructions[i].instruction:
-					print ('* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction))
-		print ('-----------------------')
+		try: 
+			print ('-----------------------')
+			print ('The following changes were made to the original recipe: ')
+			if len(self.original_recipe.ingredients) < len(self.ingredients):
+				for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
+					print ('* added {}'.format(self.ingredients[i].name))
+			else:
+				for i in range(len(self.original_recipe.ingredients)):
+					if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
+						print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
+			if len(self.original_recipe.instructions) < len(self.instructions):
+				for i in range(len(self.original_recipe.instructions), len(self.instructions)):
+					print ('* added {}'.format(self.instructions[i].instruction))
+			else:
+				for i in range(len(self.original_recipe.instructions)):
+					if self.original_recipe.instructions[i].instruction != self.instructions[i].instruction:
+						print ('* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction))
+			print ('-----------------------')
+		except:
+			print ('-----------------------')
 
 
 	def to_healthy(self):
@@ -791,6 +796,15 @@ class Recipe(object):
 				please look at documentation for supported methods'.format(method))
 			return 
 
+
+		instruction_words = {
+			'bake': [('preheat', ''), ('preheated', ''), ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'cook'), ('baked', 'cooked')],
+			'fry': [],
+			'stir-fry': []
+		}
+
+		
+
 		if method == 'fry':
 			# vegetable and meat booleans 
 			V, M = False, False
@@ -837,10 +851,10 @@ class Recipe(object):
 				Place {0} in skillet and fry on medium heat until crispy.'.format(' and '.join([v.name for v in vegetables]))
 
 				# add vegetable instruction if vegetables are in recipe
-				self.instructions.insert(-1, Instruction(instruction_vegetables))
+				self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
 
 			# frying adds meat to the recipe regardless, 
-			self.instructions.insert(-1, Instruction(instruction_meat))
+			self.instructions.insert(-1, Instruction(instruction_meat.strip()))
 
 			# update cooking tools and methods
 			self.cooking_tools = ['skillet']
@@ -851,13 +865,36 @@ class Recipe(object):
 
 			# make sure there are vegetables 
 			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
+
 			if len(vegetables) < 5:
 				for _ in range(5 - len(vegetables)):
-					self.ingredients.append(Ingredient('{} cups of {}'.format(random.randint(1,4), random.choice(vegetable_list))))
+					try: self.ingredients.append(Ingredient('{} cups of {}'.format(random.randint(1,4), random.choice(vegetable_list))))
+					except: pass
+			# update after the additions
+			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
 
 			# add sesame oil and soy sauce to stirfry the vegetables
 			self.ingredients.append(Ingredient('1 tablespoon of sesame oil'))
 			self.ingredients.append(Ingredient('2 tablespoons of soy sauce'))
+
+			if re.search('Preheat oven to', self.instructions[0].instruction):
+				self.instructions = self.instructions[1:]
+
+			# remove / update all instructions that correlated to previous cooking methods
+			# delete_idxs = []
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			for i, instruction in enumerate(self.instructions):
+				inst = instruction.instruction.lower()
+				if re.search(other_method_regex, inst, re.I):
+					other_words = instruction_words['bake'] + instruction_words['fry']
+					for word in other_words:
+						if inst.find(word[0]):
+							inst = inst.replace(word[0], word[1])
+							self.instructions[i].instruction = inst 	# update instruction object in memory --> make permanent 
+
+			# self.instructions = [i for j, i in enumerate(self.instructions) if j not in delete_idxs]
+			
+
 
 			instruction_vegetables = 'Heat 1 tablespoon sesame oil in a large skillet over medium-high heat. Cook and \
 			stir {} until just tender, about 5 minutes. \
@@ -868,7 +905,7 @@ class Recipe(object):
 			self.cooking_tools = ['skillet']
 
 			# update instructions
-			self.instructions.insert(-1, Instruction(instruction_vegetables))
+			self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
 
 
 		# otherwise it must be 'bake' due to process of elimination
@@ -893,12 +930,26 @@ class Recipe(object):
 						instruction.instruction_words[i] = 'pan'
 						bake_instruction_idx = i
 
+
+
+			# remove / update all instructions that correlated to previous cooking methods
+			delete_idxs = []
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['stir-fry']) + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			for i, instruction in enumerate(self.instructions):
+				inst = instruction.instruction
+				if re.search(other_method_regex, instruction, re.I):
+					pass
+
+			self.instructions = [i for j, i in enumerate(self.instructions) if j not in delete_idxs]
+
+
 			# update proper instructions
 			self.instructions.insert(-1, begin_instruction)
 			self.instructions.insert(bake_instruction_idx, bake_instruction)
 
-
-		self.name = self.name + ' (' + method + ' )'
+		
+		self.update_instructions()
+		self.name = self.name + ' (' + method + ')'
 
 
 	def freq_dist(self, data):
@@ -1246,6 +1297,7 @@ def main():
 
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
+	print(recipe.to_JSON())
 
 	# recipe.to_vegan()
 	# recipe.from_vegan()
@@ -1257,10 +1309,10 @@ def main():
 	# recipe.from_healthy()
 	# recipe.to_style('Thai')
 	# recipe.to_style('Mexican')
-	# recipe.to_method('stir-fry')
+	recipe.to_method('stir-fry')
 	# recipe.to_method('fry')
 	print(recipe.to_JSON())
-	# recipe.compare_to_original()
+	recipe.compare_to_original()
 	# # recipe.print_pretty()
 
 
