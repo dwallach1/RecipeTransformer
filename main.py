@@ -23,6 +23,7 @@ import time
 import random
 import re
 import json
+import sys
 import argparse
 from urlparse import urlparse
 from collections import defaultdict, OrderedDict
@@ -610,15 +611,15 @@ class Recipe(object):
 		"""
 
 		# find a random meat from the meat_list to add
-		meat = random.choice(meat_list)
+		meat = random.choice(meat_list).encode('utf-8')
 		self.ingredients.append(Ingredient('3 cups of boiled {}'.format(meat)))
 
 
 		# update/add/build the necessary instructions
-		boiling_meat = 'Place the {} in a non-stick pan and fill the pan with water until the {} are covered.'.format(meat, meat) \
+		boiling_meat = 'Place the {0} in a non-stick pan and fill the pan with water until the {0} are covered.'.format(meat) \
 		+ ' Simmer uncovered for 5 minutes.' \
-		+ ' Then, turn off the heat and cover for 15 minutes. Remove the {} and set aside.'.format(meat)
-		adding_meat = 'Shred the {} by pulling the meat apart into thin slices by hand. Stir in the shredded {}.'.format(meat, meat)
+		+ ' Then, turn off the heat and cover for 15 minutes. Remove the {0} and set aside.'.format(meat)
+		adding_meat = 'Shred the {0} by pulling the meat apart into thin slices by hand. Stir in the shredded {0}.'.format(meat)
 
 		# Instatiate objects
 		boiling_meat_instruction = Instruction(boiling_meat)
@@ -1373,7 +1374,7 @@ def main():
 	recipe = Recipe(**recipe_attrs)
 		
 	# recipe.to_vegan()
-	# recipe.from_vegan()
+	recipe.from_vegan()
 	# recipe.to_vegetarian()
 	# recipe.from_vegetarian()
 	# recipe.to_pescatarian()
@@ -1394,7 +1395,12 @@ def main():
 # Start webPy environment
 #============================================================================
 
-def main_gui(url, method):
+def main_gui(url, method, parameter):
+
+	# parse websites to build global lists -- used for Ingredient type tagging
+	build_dynamic_lists()
+
+
 	URL = url
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
@@ -1419,12 +1425,15 @@ def main_gui(url, method):
  		recipe.from_healthy()
  	elif method == 'to_style(Thai)':
  		recipe.to_style('Thai')
- 	elif method == 'to_style(Mexican)':
- 		recipe.to_style('Mexican')
-	elif method == 'to_method(bake)':
-		recipe.to_method('bake')
-	elif method == 'to_method(fry)':
-		recipe.to_method('fry')
+ 	elif method == 'to_style(parameter)':
+ 		if not parameter:
+			return "This method requires a parameter"
+ 		recipe.to_style(parameter)
+	elif method == 'to_method(parameter)':
+		if not parameter:
+			return "This method requires a parameter"
+		recipe.to_method(parameter)
+
 	
 	s += recipe.to_JSON() 
 	s += recipe.compare_to_original()
@@ -1440,7 +1449,9 @@ app = web.application(urls, globals())
 myform = form.Form( 
     form.Textbox("url", 
         form.notnull), 
-    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(Thai)', 'to_style(Mexican)', 'to_method(bake)', 'to_method(fry)']))
+    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(parameter)', 'to_method(parameter)']),
+	form.Textbox("parameter (optional)"))
+
 
 class index: 
     def GET(self): 
@@ -1457,7 +1468,7 @@ class index:
             # form.d.boe and form['boe'].value are equivalent ways of
             # extracting the validated arguments from the form.
             # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
-            return main_gui(form.d.url, form['transformation'].value)
+            return main_gui(form.d.url, form['transformation'].value, form['parameter (optional)'].value)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
@@ -1465,6 +1476,7 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 	if args.gui:
+		sys.argv[1] = ''
 		web.internalerror = web.debugerror
 		app.run()
 	else:
