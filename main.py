@@ -31,7 +31,8 @@ import copy
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
- 
+import web
+from web import form
 
 DEBUG = False
 
@@ -1310,7 +1311,7 @@ def timeit(method):
 
 
 @timeit
-def main():
+def main(url, method):
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
@@ -1369,8 +1370,40 @@ def main():
 	# recipe.to_method('fry')
 	print(recipe.to_JSON())
 	recipe.compare_to_original()
+
 	# # recipe.print_pretty()
 
+#============================================================================
+# Start webPy environment
+#============================================================================
+
+render = web.template.render('templates/')
+
+urls = ('/', 'index')
+app = web.application(urls, globals())
+
+myform = form.Form( 
+    form.Textbox("url", 
+        form.notnull), 
+    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(Thai)', 'to_style(Mexican)', 'to_method(stir-fry)', 'to_method(fry)']))
+
+class index: 
+    def GET(self): 
+        form = myform()
+        # make sure you create a copy of the form by calling it (line above)
+        # Otherwise changes will appear globally
+        return render.formtest(form)
+
+    def POST(self): 
+        form = myform() 
+        if not form.validates(): 
+            return render.formtest(form)
+        else:
+            # form.d.boe and form['boe'].value are equivalent ways of
+            # extracting the validated arguments from the form.
+            # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
+            return main(form.d.url, form['transformation'].value)
 
 if __name__ == "__main__":
-	main()
+	web.internalerror = web.debugerror
+	app.run()
