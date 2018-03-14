@@ -1,0 +1,50 @@
+/* Style inputs, select elements and textareas */
+input[type=text], select, textarea{
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  resize: vertical;
+  margin-top: 100px;
+
+}
+
+/* Style the label to display next to the inputs */
+label {
+  padding: 12px 12px 12px 0;
+  display: inline-block;
+  margin-top: 100px;
+
+}
+
+/* Style the submit button */
+input[type=submit] {
+  background-color: #1565C0;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  float: middle;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  margin-top: 100px;
+}
+
+form {
+      margin-left: auto;
+      margin-right: auto;
+      width: 400px;
+      height: 400px;
+    }
+
+#container {
+  margin-right: auto; 
+  margin-left: auto; 
+  width: 800px; 
+  height: 800px; 
+  background: #BBDEFB;
+  margin-top: 100px;
+}
