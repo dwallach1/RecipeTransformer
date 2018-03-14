@@ -54,7 +54,11 @@ print(recipe.original_recipe.to_JSON)		# if you want to access the original reci
 
 ```
 
-
+If you prefer a GUI interface, we have implemented a locally hosted webpage using web.py. To run it, simply add the --gui flag in the command line: 
+</br>
+`>> python main.py --gui`
+</br>
+this will then print out a url to input into your webbrowser and from there you will be able to access all the functionality of this program and see the output in a much more friendly enviornment. 
 
 # Classes
 
@@ -148,7 +152,7 @@ The following are the methods of the Recipe class
 * BeautifulSoup
 * NLTK
 * Requests
-
+* web.py (for GUI)
 
 # Program Architecture
 
