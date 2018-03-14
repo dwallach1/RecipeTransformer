@@ -1435,7 +1435,10 @@ def main_gui(url, method):
 render = web.template.render('templates/')
 
 urls = ('/', 'index')
-app = web.application(urls, globals())
+class RecipeApp(web.application):
+    def run(self, port=8080, *middleware):
+        func = self.wsgifunc(*middleware)
+        return web.httpserver.runsimple(func, ('0.0.0.0', port))
 
 myform = form.Form( 
     form.Textbox("url", 
@@ -1454,9 +1457,6 @@ class index:
         if not form.validates(): 
             return render.formtest(form)
         else:
-            # form.d.boe and form['boe'].value are equivalent ways of
-            # extracting the validated arguments from the form.
-            # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
             return main_gui(form.d.url, form['transformation'].value)
 
 if __name__ == "__main__":
@@ -1466,6 +1466,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 	if args.gui:
 		web.internalerror = web.debugerror
+		app = RecipeApp(urls, globals())
 		app.run()
 	else:
 		main()
