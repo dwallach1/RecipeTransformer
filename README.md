@@ -48,8 +48,9 @@ recipe_attrs = parse_url(URL) 		# parse_url returns a dict with data to populate
 recipe = Recipe(**recipe_attrs)			# instantiate the Recipe object by unpacking dictionary
 
 # apply a transformation
-recipe_vegan = recipe.to_style('Mexican')	# convert the Creamy Mushroom Pasta to be Mexican style
-print(recipe_vegan.to_JSON())				# print the new recipe 
+recipe.to_style('Mexican')	# convert the Creamy Mushroom Pasta to be Mexican style
+print(recipe.to_JSON())				# print the new recipe 
+print(recipe.original_recipe.to_JSON)		# if you want to access the original recipe
 
 ```
 
