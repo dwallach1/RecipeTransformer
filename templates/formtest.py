@@ -26,18 +26,31 @@ form {
    transform: translate(-50%, -50%);
    text-align: right;
 }
+
+# label, input {
+#     display: block;
+# }
+
+label {
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
 div {
 	margin: 0 auto;
-	width: 400px;
-	height: 100px;
+	width: 600px;
+	height: 200px;
 	background-color: white;
 	border: 1px black solid;
 	position: relative;
 }
 .submit {
 	margin-top: 1em;
-
+  margin-right: 60px;
+  border-radius: 4px;
 }
+
+
 
 </style>
 </head>
