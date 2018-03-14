@@ -14,6 +14,7 @@ user's input, into any of the following categories:
 Authors: 
  	* David Wallach
  	* Junhao Li
+ 	* Bodhi Alarcon
 
 
  github repository: https://github.com/dwallach1/RecipeTransformer
@@ -1336,11 +1337,11 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
-	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
 	# URLS = [
 	# 	'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
@@ -1372,7 +1373,7 @@ def main():
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
 		
-	# recipe.to_vegan()
+	recipe.to_vegan()
 	# recipe.from_vegan()
 	# recipe.to_vegetarian()
 	# recipe.from_vegetarian()
@@ -1383,6 +1384,7 @@ def main():
 	# recipe.to_style('Thai')
 	# recipe.to_style('Mexican')
 	# recipe.to_method('bake')
+	# recipe.to_easy();
 	print(recipe.to_JSON())
 	# recipe.compare_to_original()
 	# recipe.to_method('fry')
@@ -1395,8 +1397,8 @@ def main():
 #============================================================================
 
 def main_gui(url, method):
-	URL = url
-	recipe_attrs = parse_url(URL)
+	build_dynamic_lists()
+	recipe_attrs = parse_url(url)
 	recipe = Recipe(**recipe_attrs)
 	s = ""
 	s += recipe.to_JSON()
@@ -1425,12 +1427,13 @@ def main_gui(url, method):
 		recipe.to_method('bake')
 	elif method == 'to_method(fry)':
 		recipe.to_method('fry')
+	elif method == 'to_easy':
+		recipe.to_easy()
 	
 	s += recipe.to_JSON() 
 	s += recipe.compare_to_original()
 
 	return s
-
 
 render = web.template.render('templates/')
 
@@ -1443,7 +1446,7 @@ class RecipeApp(web.application):
 myform = form.Form( 
     form.Textbox("url", 
         form.notnull), 
-    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(Thai)', 'to_style(Mexican)', 'to_method(bake)', 'to_method(fry)']))
+    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(Thai)', 'to_style(Mexican)', 'to_method(bake)', 'to_method(fry)', 'to_easy']))
 
 class index: 
     def GET(self): 

@@ -12,6 +12,11 @@ body {
 h1 {
     color: maroon;
     margin-top: 40px;
+    margin-left: 40px;
+} 
+
+h3 {
+  margin-left: 40px;
 } 
 
 form {
