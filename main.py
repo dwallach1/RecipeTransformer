@@ -810,7 +810,7 @@ class Recipe(object):
 
 		replacements = {
 			'to_fry': [('preheated', ''), ('preheat', ''),  ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'fry'), ('baked', 'fried')],
-			'to_bake': [('skillet', 'baking sheet'), ('fry', 'place in oven'), ('drain', 'dry'), ('paper towel', ''), ('dry', 'remove from oven')],
+			'to_bake': [('skillet', 'baking sheet'), ('fry', 'place in oven'), ('drain', 'dry'), ('paper towel', ''), ('dry', 'remove from oven'), ('pot', 'baking sheet'), ('boil', 'crisp'), ('water', 'tin foil')],
 			'to_stir-fry': [('preheated', ''), ('preheat', ''),  ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'cook'), ('baked', 'cooked'), ('fry', 'cook until crisp'), ('drain', 'pour over rice and vegetables'), ('paper towel', '')]
 		}
 
@@ -1463,6 +1463,7 @@ myform = form.Form(
 	form.Textbox("parameter (optional)"))
 
 
+
 class index: 
     def GET(self): 
         form = myform()
@@ -1475,10 +1476,8 @@ class index:
         if not form.validates(): 
             return render.formtest(form)
         else:
-            # form.d.boe and form['boe'].value are equivalent ways of
-            # extracting the validated arguments from the form.
-            # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
             return main_gui(form.d.url, form['transformation'].value, form['parameter (optional)'].value)
+
 
 
 if __name__ == "__main__":
