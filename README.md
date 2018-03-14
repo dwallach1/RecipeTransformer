@@ -136,6 +136,7 @@ The following are the methods of the Recipe class
 * **from_pescatarian()** - replaces seafood with meat and/or adds new meat ingredients to the recipe
 * **to_style(style, threshold=1.0)** - takes in a parameter of type string `style` (i.e. 'Mexican', 'Thai') and converts the recipe to be more of the input style. The parameter `threshold` allows the user to control how much they want their recipe changed to the desired style. Threshold is a float from 0.0 to 1.0 with 0.0 being no changes and 1.0 being as many changes as possible. 
 * **to_method(method)** - transforms the cooking method to be like that method. For example, if passed `'fry'` as the method paramter's value, then it will add flour and oil to the recipe if not already there and fry the meats and vegetables.
+* **to_easy()** - transforms the recipe from DIY to easy by making the ingredients less intenaive to get and prepare
 * **print_pretty()** - used to print the attributes of the recipe in an easy to read format
 * **to_JSON()** - used to export the recipe class to a JSON format
 * **compare_to_original()** - shows the additions and/or changes reflected in the current recipe from the recipe that the object was instatiated with

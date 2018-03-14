@@ -390,6 +390,8 @@ class Recipe(object):
 		self.cooking_tools, self.cooking_methods  = self.parse_instructions()	# get aggregate tools and methods apparent in all instructions
 		self.update_instructions()			# as part of the steps requirement, add the associated ingredients to each instruction step
 
+
+		self.instructions = [i for i in self.instructions if len(i.instruction)]
 		# save original copy to compare with the transformations
 		self.original_recipe = copy.deepcopy(self)
 	
@@ -803,10 +805,10 @@ class Recipe(object):
 			return 
 
 
-		instruction_words = {
-			'bake': [('preheat', ''), ('preheated', ''), ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'cook'), ('baked', 'cooked')],
-			'fry': [('skillet', 'baking sheet'), ('fry', 'place in oven')],
-			'stir-fry': [('skillet', 'baking sheet')]
+		replacements = {
+			'to_fry': [('preheated', ''), ('preheat', ''),  ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'fry'), ('baked', 'fried')],
+			'to_bake': [('skillet', 'baking sheet'), ('fry', 'place in oven'), ('drain', 'dry'), ('paper towel', ''), ('dry', 'remove from oven')],
+			'to_stir-fry': [('preheated', ''), ('preheat', ''),  ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'cook'), ('baked', 'cooked'), ('fry', 'cook until crisp'), ('drain', 'pour over rice and vegetables'), ('paper towel', '')]
 		}
 
 
@@ -856,15 +858,15 @@ class Recipe(object):
 				self.instructions = self.instructions[1:]
 
 			# remove / update all instructions that correlated to previous cooking methods
-			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + ')'
+			other_method_regex = '(' + '|'.join(w[0] for w in replacements['to_fry']) + ')'
 			for i, instruction in enumerate(self.instructions):
 				inst = ' ' + instruction.instruction.lower()
 				if re.search(other_method_regex, inst, flags=re.I):
-					other_words = instruction_words['bake'] 
+					other_words = replacements['to_fry'] 
 					for word in other_words:
 						if inst.find(word[0]):
 							inst = inst.replace(word[0], word[1])
-							self.instructions[i].instruction = inst.strip()	# update instruction object in memory --> make permanent 
+							self.instructions[i] = Instruction(inst.strip())	# update instruction object in memory --> make permanent 
 
 
 
@@ -873,12 +875,12 @@ class Recipe(object):
 			Place {0} in skillet and fry on medium heat until one side is golden brown, \
 			then turn and brown other side until {0} is no longer pink inside and its juices run clear.'.format(meat.name)
 
-			if len(vegetables):
-				instruction_vegetables = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
-				Place {0} in skillet and fry on medium heat until crispy.'.format(' and '.join([v.name for v in vegetables]))
+			# if len(vegetables):
+			# 	instruction_vegetables = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
+			# 	Place {0} in skillet and fry on medium heat until crispy.'.format(' and '.join([v.name for v in vegetables]))
 
-				# add vegetable instruction if vegetables are in recipe
-				self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
+			# 	# add vegetable instruction if vegetables are in recipe
+			# 	self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
 
 			# frying adds meat to the recipe regardless, 
 			self.instructions.insert(-1, Instruction(instruction_meat.strip()))
@@ -886,6 +888,11 @@ class Recipe(object):
 			# update cooking tools and methods
 			self.cooking_tools = ['skillet']
 			self.cooking_methods = ['fry']
+
+			if not re.search('serve', self.instructions[-1].instruction):
+				self.instructions.append(Instruction('Remove {} from the skillet. Dry on paper towels and serve!'.format(meat.name)))
+
+
 
 		#
 		#
@@ -909,22 +916,25 @@ class Recipe(object):
 			self.ingredients.append(Ingredient('1 tablespoon of sesame oil'))
 			self.ingredients.append(Ingredient('2 tablespoons of soy sauce'))
 
+			# add rice
+			self.ingredients.append(Ingredient('1 1/2 cups of uncooked rice'))
+
 			if re.search('Preheat oven to', self.instructions[0].instruction):
 				self.instructions = self.instructions[1:]
 
 			# remove / update all instructions that correlated to previous cooking methods
-			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + ')'
+			other_method_regex = '(' + '|'.join(w[0] for w in replacements['to_stir-fry']) + ')'
 			for i, instruction in enumerate(self.instructions):
 				inst = ' ' + instruction.instruction.lower()
 				if re.search(other_method_regex, inst, flags=re.I):
-					other_words = instruction_words['bake'] 
+					other_words = replacements['to_stir-fry'] 
 					for word in other_words:
 						if inst.find(word[0]):
 							inst = inst.replace(word[0], word[1])
-							self.instructions[i].instruction = inst.strip() 	# update instruction object in memory --> make permanent 
+							self.instructions[i] = Instruction(inst.strip()) 	# update instruction object in memory --> make permanent 
 
 			
-
+			instruction_rice = 'Heat 4 quarts of water to a boil and then place the rice in and let it cook for 8 minutes'
 
 			instruction_vegetables = 'Heat 1 tablespoon sesame oil in a large skillet over medium-high heat. Cook and \
 			stir {} until just tender, about 5 minutes. \
@@ -936,6 +946,7 @@ class Recipe(object):
 
 			# update instructions
 			self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
+			self.instructions.insert(-1, Instruction(instruction_rice.strip()))
 
 		#
 		#
@@ -968,23 +979,24 @@ class Recipe(object):
 
 
 			# remove / update all instructions that correlated to previous cooking methods
-			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			other_method_regex = '(' + '|'.join(w[0] for w in replacements['to_bake']) + ')'
 			for i, instruction in enumerate(self.instructions):
 				inst = ' ' + instruction.instruction.lower()
 				if re.search(other_method_regex, inst, flags=re.I):
-					other_words = instruction_words['fry'] 
+					other_words = replacements['to_bake'] 
 					for word in other_words:
 						if inst.find(word[0]):
 							inst = inst.replace(word[0], word[1])
-							self.instructions[i].instruction = inst.strip() 	# update instruction object in memory --> make permanent 
+							self.instructions[i] = Instruction(inst.strip()) 	# update instruction object in memory --> make permanent 
 
 
 
 			# update proper instructions
 			self.instructions.insert(0, begin_instruction)
-			if re.search('serve', self.instructions[-1].instruction, flags=re.I):
-				self.instructions.insert(bake_instruction_idx, bake_instruction)
 
+			if not re.search('serve', self.instructions[-1].instruction, flags=re.I):
+				self.instructions.insert(bake_instruction_idx, bake_instruction)
+			
 		
 		self.update_instructions()
 		self.name = self.name + ' (' + method + ')'
@@ -1386,6 +1398,7 @@ def main(url, method):
 		recipe.to_method('bake')
 	elif method == 'to_method(fry)':
 		recipe.to_method('fry')
+		
 	# recipe.to_vegan()
 	# recipe.from_vegan()
 	# recipe.to_vegetarian()
@@ -1398,6 +1411,7 @@ def main(url, method):
 	# recipe.to_style('Mexican')
 	# recipe.to_method('bake')
 	# recipe.to_method('fry')
+	
 	s += recipe.to_JSON() 
 	s += recipe.compare_to_original()
 
