@@ -31,7 +31,8 @@ import copy
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
- 
+import web
+from web import form
 
 DEBUG = False
 
@@ -456,7 +457,8 @@ class Recipe(object):
 		"""
 		print a human friendly version of the recipe
 		"""
-		print('\nIngredients List:')
+		s = ""
+		s += '\nIngredients List:'
 		for ing in self.ingredients:			
 			# only add quantity, measurement, descriptor, and preperation if we have them
 			quant = ''
@@ -477,11 +479,12 @@ class Recipe(object):
 			
 			full_ing = '{}{}{}{}{}'.format(quant, measure, descr, ing.name, prep)
 
-			print(full_ing)
+			s += full_ing
 
-		print('\nInstructions:')
+		s += '\nInstructions:'
 		for i, t_inst in enumerate(self.text_instructions[:-1]):
-			print(textwrap.fill('{}. {}'.format(i+1, t_inst), 80))
+			s += textwrap.fill('{}. {}'.format(i+1, t_inst), 80)
+		return s
 
 
 	def compare_to_original(self):
@@ -489,26 +492,28 @@ class Recipe(object):
 		Compares the current recipe to the original recipe the object was instatiated with.
 		If no changes were made, then they will be identical. 
 		"""
+		s = ""
 		try: 
-			print ('-----------------------')
-			print ('The following changes were made to the original recipe: ')
+			s += '\n-----------------------'
+			s += '\nThe following changes were made to the original recipe: '
 			if len(self.original_recipe.ingredients) < len(self.ingredients):
 				for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
-					print ('* added {}'.format(self.ingredients[i].name))
+					s += '\n* added {}'.format(self.ingredients[i].name)
 			else:
 				for i in range(len(self.original_recipe.ingredients)):
 					if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
-						print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
+						s += '\n* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name)
 			if len(self.original_recipe.instructions) < len(self.instructions):
 				for i in range(len(self.original_recipe.instructions), len(self.instructions)):
-					print ('* added {}'.format(self.instructions[i].instruction))
+					s += '\n* added {}'.format(self.instructions[i].instruction)
 			else:
 				for i in range(len(self.original_recipe.instructions)):
 					if self.original_recipe.instructions[i].instruction != self.instructions[i].instruction:
-						print ('* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction))
-			print ('-----------------------')
+						s += '\n* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction)
+			s += '\n-----------------------'
 		except:
-			print ('-----------------------')
+			s += '\n-----------------------'
+		return s
 
 
 	def to_healthy(self):
@@ -1322,7 +1327,7 @@ def timeit(method):
 
 
 @timeit
-def main():
+def main(url, method):
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
@@ -1334,7 +1339,7 @@ def main():
 	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
-	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
 	# URLS = [
 	# 	'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
@@ -1363,10 +1368,37 @@ def main():
 	# 	recipe = Recipe(**recipe_attrs)
 	# 	print(recipe.to_JSON())
 
+	URL = url
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
-	print(recipe.to_JSON())
+	s = ""
+	s += recipe.to_JSON()
 
+	if method == 'to_vegan':
+		recipe.to_vegan()
+ 	elif method == 'from_vegan':
+ 		recipe.from_vegan()
+ 	elif method == 'to_vegetarian':
+ 		recipe.to_vegetarian()
+ 	elif method == 'from_vegetarian':
+ 		recipe.from_vegetarian()
+ 	elif method == 'to_pescatarian':
+ 		recipe.to_pescatarian()
+ 	elif method == 'from_pescatarian':
+ 		recipe.from_pescatarian()
+ 	elif method == 'to_healthy':
+ 		recipe.to_healthy()
+ 	elif method == 'from_healthy':
+ 		recipe.from_healthy()
+ 	elif method == 'to_style(Thai)':
+ 		recipe.to_style('Thai')
+ 	elif method == 'to_style(Mexican)':
+ 		recipe.to_style('Mexican')
+	elif method == 'to_method(bake)':
+		recipe.to_method('bake')
+	elif method == 'to_method(fry)':
+		recipe.to_method('fry')
+		
 	# recipe.to_vegan()
 	# recipe.from_vegan()
 	# recipe.to_vegetarian()
@@ -1377,13 +1409,49 @@ def main():
 	# recipe.from_healthy()
 	# recipe.to_style('Thai')
 	# recipe.to_style('Mexican')
-	# recipe.to_method('stir-fry')
-	recipe.to_method('fry')
 	# recipe.to_method('bake')
 	print(recipe.to_JSON())
 	# recipe.compare_to_original()
+	# recipe.to_method('fry')
+	
+	s += recipe.to_JSON() 
+	s += recipe.compare_to_original()
+
+	return s
+
 	# # recipe.print_pretty()
 
+#============================================================================
+# Start webPy environment
+#============================================================================
+
+render = web.template.render('templates/')
+
+urls = ('/', 'index')
+app = web.application(urls, globals())
+
+myform = form.Form( 
+    form.Textbox("url", 
+        form.notnull), 
+    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(Thai)', 'to_style(Mexican)', 'to_method(bake)', 'to_method(fry)']))
+
+class index: 
+    def GET(self): 
+        form = myform()
+        # make sure you create a copy of the form by calling it (line above)
+        # Otherwise changes will appear globally
+        return render.formtest(form)
+
+    def POST(self): 
+        form = myform() 
+        if not form.validates(): 
+            return render.formtest(form)
+        else:
+            # form.d.boe and form['boe'].value are equivalent ways of
+            # extracting the validated arguments from the form.
+            # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
+            return main(form.d.url, form['transformation'].value)
 
 if __name__ == "__main__":
-	main()
+	web.internalerror = web.debugerror
+	app.run()
