@@ -37,16 +37,15 @@ DEBUG = False
 
 
 # simple regex used to find specific attributes in strings 
-measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices|pods|package|can|head)'
-tool_indicator_regex = '(pan|skillet|pot|sheet|grate|whisk|griddle|bowl)'
-method_indicator_regex = '(boil|bake|baking|simmer|stir)'
-heat_method_indicator_regex = '(boil|bake|simmer|stir)'
+measure_regex = '(cup|spoon|fluid|ounce|pinch|gill|pint|quart|gallon|pound|drops|recipe|slices|pods|package|can|head|halves)'
+tool_indicator_regex = '(pan|skillet|pot|sheet|grate|whisk|griddle|bowl|oven|dish)'
+method_indicator_regex = '(boil|bake|baking|simmer|stir|roast|fry)'
 time_indicator_regex = '(min|hour)'
 
 # these are used as last resort measures to sort out names, descriptors, and preperation words that our system is having trouble parsing
-descriptor_regex = '(color|mini|container|skin|bone|halves|fine|parts|leftover)'
-preperation_regex = '(room|temperature|divided|sliced|dice|mince|chopped|quartered|cored|shredded|seperated)'
-names_regex = '(garlic|poppy|baking|sour|cream|broth|chicken|olive|mushroom|green)'
+descriptor_regex = '(color|mini|container|skin|bone|halves|fine|parts|leftover|style|frying)'
+preperation_regex = '(room|temperature|divided|sliced|dice|mince|chopped|quartered|cored|shredded|seperated|pieces)'
+names_regex = '(garlic|poppy|baking|sour|cream|broth|chicken|olive|mushroom|green|vegetable|bell)'
 
 
 
@@ -234,6 +233,10 @@ class Ingredient(object):
 		if re.search('can', m, flags=re.I):
 			extra = description[description.find("(")+1:description.find(")")]
 			return extra + ' can(s)'
+
+		if description.find("(") > -1 and any(char.isdigit() for char in description):
+			return description[description.find("(")+1:description.find(")")]
+
 		return m
 
 
@@ -255,7 +258,11 @@ class Ingredient(object):
 		"""
 		find all preperations (finely, chopped) by finding action words such as verbs 
 		"""
-		preperations = [d[0] for d in description_tagged if d[1] == 'VB' or d[1] == 'VBD' or re.search(preperation_regex, d[0], flags=re.I)]
+		preperations = [d[0] for d in description_tagged if (
+															d[1] == 'VB' or d[1] == 'VBD' 
+															or re.search(preperation_regex, d[0], flags=re.I)
+															)
+															and not re.search(names_regex, d[0], flags=re.I)]
 		for i, p in enumerate(preperations):
 			if p == 'taste':
 				preperations[i] = 'to taste'
@@ -318,8 +325,8 @@ class Instruction(object):
 		for word in instruction_words:
 			if re.search(tool_indicator_regex, word, flags=re.I):
 				cooking_tools.append(word)
-			
-		return list(set(cooking_tools))
+		wordset = set(cooking_tools)
+		return [item for item in wordset if item.istitle() or item.title() not in wordset]
 
 
 	def find_methods(self, instruction_words):
@@ -331,9 +338,11 @@ class Instruction(object):
 		for word in instruction_words:
 			if re.search(method_indicator_regex, word, flags=re.I):
 				cooking_methods.append(word)
+			if re.search('preheat', word, re.I):
+				cooking_methods.append('bake')
 
-			
-		return list(set(cooking_methods))
+		wordset = set(cooking_methods)
+		return [item for item in wordset if item.istitle() or item.title() not in wordset]
 
 
 	def find_time(self, instruction):
@@ -478,16 +487,26 @@ class Recipe(object):
 		Compares the current recipe to the original recipe the object was instatiated with.
 		If no changes were made, then they will be identical. 
 		"""
-		print ('-----------------------')
-		print ('The following changes were made to the original recipe: ')
-		if len(self.original_recipe.ingredients) < len(self.ingredients):
-			for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
-				print ('* added {}'.format(self.ingredients[i].name))
-		else:
-			for i in range(len(self.original_recipe.ingredients)):
-				if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
-					print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
-		print ('-----------------------')
+		try: 
+			print ('-----------------------')
+			print ('The following changes were made to the original recipe: ')
+			if len(self.original_recipe.ingredients) < len(self.ingredients):
+				for i in range(len(self.original_recipe.ingredients), len(self.ingredients)):
+					print ('* added {}'.format(self.ingredients[i].name))
+			else:
+				for i in range(len(self.original_recipe.ingredients)):
+					if self.original_recipe.ingredients[i].name != self.ingredients[i].name:
+						print ('* {} ---> {}'.format(self.original_recipe.ingredients[i].name, self.ingredients[i].name))
+			if len(self.original_recipe.instructions) < len(self.instructions):
+				for i in range(len(self.original_recipe.instructions), len(self.instructions)):
+					print ('* added {}'.format(self.instructions[i].instruction))
+			else:
+				for i in range(len(self.original_recipe.instructions)):
+					if self.original_recipe.instructions[i].instruction != self.instructions[i].instruction:
+						print ('* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction))
+			print ('-----------------------')
+		except:
+			print ('-----------------------')
 
 
 	def to_healthy(self):
@@ -725,20 +744,20 @@ class Recipe(object):
 
 
 		# Find out most common ingredients from all recipes of type 'style' -- then decide which to switch and/or add to current recipe
-		try: most_common_sauce = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'S'])
-		except IndexError: most_common_sauce = None 
-		try: most_common_meat = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'M'])
-		except IndexError: most_common_meat = None
-		try: most_common_vegetable = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'V'])
-		except IndexError: most_common_vegetable = None
-		try: most_common_grain = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'G'])
-		except IndexError: most_common_grain = None
-		try: most_common_dairy = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'D'])
-		except IndexError: most_common_dairy = None
-		try: most_common_herb = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'H'])
-		except IndexError: most_common_herb = None
-		try: most_common_fruit = random.choice([ingredient for ingredient in ingredient_changes if ingredient.type == 'F'])
-		except IndexError: most_common_fruit = None
+		try: most_common_sauce = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'S')
+		except StopIteration: most_comon_sauce = None 
+		try: most_common_meat = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'M')
+		except StopIteration: most_common_meat = None
+		try: most_common_vegetable = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'V')
+		except StopIteration: most_common_vegetable = None
+		try: most_common_grain = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'G')
+		except StopIteration: most_common_grain = None
+		try: most_common_dairy = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'D')
+		except StopIteration: most_common_dairy = None
+		try: most_common_herb = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'H')
+		except StopIteration: most_common_herb = None
+		try: most_common_fruit = next(ingredient for ingredient in ingredient_changes if ingredient.type == 'F')
+		except StopIteration: most_common_fruit = None
 		
 
 		# switch the ingredients
@@ -778,15 +797,18 @@ class Recipe(object):
 				please look at documentation for supported methods'.format(method))
 			return 
 
-		if method == 'fry':
-			meats = [ingredient for ingredient in self.ingredients if ingredient.type == 'M']
-			if not len(meats):
-				# add meat if there is no meat in the recipe
-				meat = Ingredient('10 ounces of {}'.format(random.choice(meat_list)))
-				self.ingredients.append(meat)
 
-			else:
-				meat = meats[0]
+		instruction_words = {
+			'bake': [('preheat', ''), ('preheated', ''), ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'cook'), ('baked', 'cooked')],
+			'fry': [],
+			'stir-fry': []
+		}
+
+		
+
+		if method == 'fry':
+			# vegetable and meat booleans 
+			V, M = False, False
 
 			# add flour if there is no flour in the recipe already 
 			flour = [ingredient for ingredient in self.ingredients if 'flour' in ingredient.name.lower().split(' ')]
@@ -803,6 +825,23 @@ class Recipe(object):
 			# find if there are vegetables
 			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
 
+			# find if there are meats
+			meats = [ingredient for ingredient in self.ingredients if ingredient.type == 'M']
+			
+			if not len(meats):
+				if not len(vegetables):
+					# add meat if there is no meat or vegetables in the recipe
+					meat = Ingredient('10 ounces of {}'.format(random.choice(meat_list)))
+					self.ingredients.append(meat)
+					M = True
+				else: 
+					V = True
+			else:
+				M = True
+				V = bool(len(vegetables))
+				meat = meats[0]
+
+
 			# add necessary instructions
 			instruction_meat = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
 			Place {0} in skillet and fry on medium heat until one side is golden brown, \
@@ -811,44 +850,107 @@ class Recipe(object):
 			if len(vegetables):
 				instruction_vegetables = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
 				Place {0} in skillet and fry on medium heat until crispy.'.format(' and '.join([v.name for v in vegetables]))
-				self.instructions.insert(-1, Instruction(instruction_vegetables))
 
+				# add vegetable instruction if vegetables are in recipe
+				self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
 
-			self.instructions.insert(-1, Instruction(instruction_meat))
+			# frying adds meat to the recipe regardless, 
+			self.instructions.insert(-1, Instruction(instruction_meat.strip()))
+
+			# update cooking tools and methods
+			self.cooking_tools = ['skillet']
+			self.cooking_methods = ['fry']
 
 
 		elif method == 'stir-fry':
 
 			# make sure there are vegetables 
 			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
+
 			if len(vegetables) < 5:
 				for _ in range(5 - len(vegetables)):
-					self.ingredients.append(Ingredient('{} cups of {}'.format(random.randint(1,4), random.choice(vegetable_list))))
+					try: self.ingredients.append(Ingredient('{} cups of {}'.format(random.randint(1,4), random.choice(vegetable_list))))
+					except: pass
+			# update after the additions
+			vegetables = [ingredient for ingredient in self.ingredients if ingredient.type == 'V']
 
 			# add sesame oil and soy sauce to stirfry the vegetables
 			self.ingredients.append(Ingredient('1 tablespoon of sesame oil'))
 			self.ingredients.append(Ingredient('2 tablespoons of soy sauce'))
 
+			if re.search('Preheat oven to', self.instructions[0].instruction):
+				self.instructions = self.instructions[1:]
+
+			# remove / update all instructions that correlated to previous cooking methods
+			# delete_idxs = []
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			for i, instruction in enumerate(self.instructions):
+				inst = instruction.instruction.lower()
+				if re.search(other_method_regex, inst, re.I):
+					other_words = instruction_words['bake'] + instruction_words['fry']
+					for word in other_words:
+						if inst.find(word[0]):
+							inst = inst.replace(word[0], word[1])
+							self.instructions[i].instruction = inst 	# update instruction object in memory --> make permanent 
+
+			# self.instructions = [i for j, i in enumerate(self.instructions) if j not in delete_idxs]
+			
+
+
 			instruction_vegetables = 'Heat 1 tablespoon sesame oil in a large skillet over medium-high heat. Cook and \
 			stir {} until just tender, about 5 minutes. \
 			Remove vegetables from skillet and keep warm.'.format(' and '.join([v.name for v in vegetables]))
 
-			self.instructions.insert(-1, Instruction(instruction_vegetables))
+			# update cooking method and tools
+			self.cooking_methods = ['stir-fry']
+			self.cooking_tools = ['skillet']
+
+			# update instructions
+			self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
 
 
 		# otherwise it must be 'bake' due to process of elimination
 		else:
 
 			begin_instruction = Instruction('Preheat oven to 350 degrees F (175 degrees C). Grease a 9x13-inch baking dish.')
+			bake_instruction = Instruction('Bake in the preheated oven until the ensemble is crisp, about 30 minutes. Remove from the oven and drizzle with sauce.')
+
+			# update cooking methods and tools
+			self.cooking_methods = ['Bake']
+			current_tools = self.tools
+			self.cooking_tools = ['pan', 'oven', 'dish', 'bowl']
+
+			bake_instruction_idx = 1
+
+			for instruction in self.instructions:
+				words = instruction.instruction_words
+				for i, w in enumerate(words):
+
+					# do all stir-fry recipes use skillets?
+					if re.search('skillet', w, flags=re.I):
+						instruction.instruction_words[i] = 'pan'
+						bake_instruction_idx = i
 
 
 
+			# remove / update all instructions that correlated to previous cooking methods
+			delete_idxs = []
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['stir-fry']) + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			for i, instruction in enumerate(self.instructions):
+				inst = instruction.instruction
+				if re.search(other_method_regex, instruction, re.I):
+					pass
 
+			self.instructions = [i for j, i in enumerate(self.instructions) if j not in delete_idxs]
+
+
+			# update proper instructions
 			self.instructions.insert(-1, begin_instruction)
+			self.instructions.insert(bake_instruction_idx, bake_instruction)
 
-
-
-		self.name = self.name + ' (' + method + ' )'
+		
+		self.update_instructions()
+		self.name = self.name + ' (' + method + ')'
 
 
 	def to_easy(self):
@@ -1184,56 +1286,57 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
-	
-	URLS = [
-		# 'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
-		# 'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
-		# 'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
-		# 'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
-		# 'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
-		# 'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
-		# 'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
-		# 'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+	URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
+	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
-		'https://www.allrecipes.com/recipe/20545/bruschetta-iii/'
-		# 'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
-		# 'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
+	URLS = [
+		'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
+		'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
+		'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
+		'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
+		'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
+		'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
+		'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
+		'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+		'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
+		'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
 
 	]
-	for url in URLS:
-		recipe_attrs = parse_url(url)
-		recipe = Recipe(**recipe_attrs)
-		recipe.to_easy()
-		print(recipe.to_JSON())
 
-	# recipe_attrs = parse_url(URL)
-	# recipe = Recipe(**recipe_attrs)
+	# for url in URLS:
+	# 	recipe_attrs = parse_url(url)
+	# 	recipe = Recipe(**recipe_attrs)
+	# 	print(recipe.to_JSON())
 
-	# # recipe.to_vegan()
-	# # recipe.from_vegan()
-	# # recipe.to_vegetarian()
-	# # recipe.from_vegetarian()
-	# # recipe.to_pescatarian()
-	# # recipe.from_pescatarian()
-	# # recipe.to_healthy()
-	# # recipe.from_healthy()
-	# # recipe.to_style('Thai')
-	# # recipe.to_style('Mexican')
-	# # recipe.to_method('stir-fry')
-	# # recipe.to_method('fry')
-	# print(recipe.to_JSON())
-	# # recipe.compare_to_original()
+	recipe_attrs = parse_url(URL)
+	recipe = Recipe(**recipe_attrs)
+	print(recipe.to_JSON())
+
+	# recipe.to_vegan()
+	# recipe.from_vegan()
+	# recipe.to_vegetarian()
+	# recipe.from_vegetarian()
+	# recipe.to_pescatarian()
+	# recipe.from_pescatarian()
+	# recipe.to_healthy()
+	# recipe.from_healthy()
+	# recipe.to_style('Thai')
+	# recipe.to_style('Mexican')
+	recipe.to_method('stir-fry')
+	# recipe.to_method('fry')
+	print(recipe.to_JSON())
+	recipe.compare_to_original()
 	# # recipe.print_pretty()
 
 
