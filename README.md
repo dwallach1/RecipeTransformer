@@ -20,19 +20,20 @@ For grading purposes, here is what we completed:
 - [x] Ingredient name
 - [x] Quantity
 - [x] Measurement (cup, teaspoon, pinch, etc.)
-- [x] (optional) Descriptor (e.g. fresh, extra-virgin)
-- [x] (optional) Preparation (e.g. finely chopped)
+- [x] Descriptor (e.g. fresh, extra-virgin) (OPTIONAL)
+- [x] Preparation (e.g. finely chopped) (OPTIONAL)
 - [x] Tools – pans, graters, whisks, etc.
 - [x] Primary cooking method (e.g. sauté, broil, boil, poach, etc.)
-- [x] (optional) Other cooking methods used (e.g. chop, grate, stir, shake, mince, crush, squeeze, etc.)
-- [x] (optional) Steps – parse the directions into a series of steps that each consist of ingredients, tools, methods, and times
+- [x] Other cooking methods used (e.g. chop, grate, stir, shake, mince, crush, squeeze, etc.) (OPTIONAL)
+- [x] Steps – parse the directions into a series of steps that each consist of ingredients, tools, methods, and times (OPTIONAL)
 - [x] To and from vegetarian (REQUIRED)
 - [x] To and from healthy (REQUIRED)
 - [x] Style of cuisine (AT LEAST ONE REQUIRED) 
-- [x] (optional) Any input cuisine 
+- [x] Any input cuisine (OPTIONAL)
 - [x] Another Style of cuisine (OPTIONAL)
 - [x] to and from Pescatatian (OPTIONAL)
 - [x] DIY to easy (OPTIONAL)
+- [x] GUI to run the program (OPTIONAL)
 
 
 

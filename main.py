@@ -14,6 +14,7 @@ user's input, into any of the following categories:
 Authors: 
  	* David Wallach
  	* Junhao Li
+ 	* Bodhi Alarcon
 
 
  github repository: https://github.com/dwallach1/RecipeTransformer
@@ -1337,11 +1338,11 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
 	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
-	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
 	# URLS = [
 	# 	'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
@@ -1374,7 +1375,10 @@ def main():
 	recipe = Recipe(**recipe_attrs)
 		
 	# recipe.to_vegan()
-	recipe.from_vegan()
+	# recipe.from_vegan()
+
+	recipe.to_vegan()
+	# recipe.from_vegan()
 	# recipe.to_vegetarian()
 	# recipe.from_vegetarian()
 	# recipe.to_pescatarian()
@@ -1384,6 +1388,7 @@ def main():
 	# recipe.to_style('Thai')
 	# recipe.to_style('Mexican')
 	# recipe.to_method('bake')
+	# recipe.to_easy();
 	print(recipe.to_JSON())
 	# recipe.compare_to_original()
 	# recipe.to_method('fry')
@@ -1395,6 +1400,7 @@ def main():
 # Start webPy environment
 #============================================================================
 
+
 def main_gui(url, method, parameter):
 
 	# parse websites to build global lists -- used for Ingredient type tagging
@@ -1403,6 +1409,7 @@ def main_gui(url, method, parameter):
 
 	URL = url
 	recipe_attrs = parse_url(URL)
+
 	recipe = Recipe(**recipe_attrs)
 	s = ""
 	s += recipe.to_JSON()
@@ -1434,17 +1441,20 @@ def main_gui(url, method, parameter):
 			return "This method requires a parameter"
 		recipe.to_method(parameter)
 
+
 	
 	s += recipe.to_JSON() 
 	s += recipe.compare_to_original()
 
 	return s
 
-
 render = web.template.render('templates/')
 
 urls = ('/', 'index')
-app = web.application(urls, globals())
+class RecipeApp(web.application):
+    def run(self, port=8080, *middleware):
+        func = self.wsgifunc(*middleware)
+        return web.httpserver.runsimple(func, ('0.0.0.0', port))
 
 myform = form.Form( 
     form.Textbox("url", 
@@ -1470,6 +1480,7 @@ class index:
             # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
             return main_gui(form.d.url, form['transformation'].value, form['parameter (optional)'].value)
 
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--gui", help="run application on locally hosted webpage", action="store_true")
@@ -1478,6 +1489,7 @@ if __name__ == "__main__":
 	if args.gui:
 		sys.argv[1] = ''
 		web.internalerror = web.debugerror
+		app = RecipeApp(urls, globals())
 		app.run()
 	else:
 		main()
