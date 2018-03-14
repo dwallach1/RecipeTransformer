@@ -1381,7 +1381,7 @@ def main():
 	recipe.to_method('fry')
 	# recipe.to_method('bake')
 	print(recipe.to_JSON())
-	recipe.compare_to_original()
+	# recipe.compare_to_original()
 	# # recipe.print_pretty()
 
 
