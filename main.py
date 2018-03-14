@@ -23,6 +23,7 @@ import time
 import random
 import re
 import json
+import argparse
 from urlparse import urlparse
 from collections import defaultdict, OrderedDict
 from operator import itemgetter
@@ -1327,7 +1328,7 @@ def timeit(method):
 
 
 @timeit
-def main(url, method):
+def main():
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
@@ -1339,7 +1340,7 @@ def main(url, method):
 	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
-	# URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
+	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
 	# URLS = [
 	# 	'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
@@ -1368,6 +1369,32 @@ def main(url, method):
 	# 	recipe = Recipe(**recipe_attrs)
 	# 	print(recipe.to_JSON())
 
+	recipe_attrs = parse_url(URL)
+	recipe = Recipe(**recipe_attrs)
+		
+	# recipe.to_vegan()
+	# recipe.from_vegan()
+	# recipe.to_vegetarian()
+	# recipe.from_vegetarian()
+	# recipe.to_pescatarian()
+	# recipe.from_pescatarian()
+	# recipe.to_healthy()
+	# recipe.from_healthy()
+	# recipe.to_style('Thai')
+	# recipe.to_style('Mexican')
+	# recipe.to_method('bake')
+	print(recipe.to_JSON())
+	# recipe.compare_to_original()
+	# recipe.to_method('fry')
+	# # recipe.print_pretty()
+
+
+
+#============================================================================
+# Start webPy environment
+#============================================================================
+
+def main_gui(url, method):
 	URL = url
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
@@ -1398,32 +1425,12 @@ def main(url, method):
 		recipe.to_method('bake')
 	elif method == 'to_method(fry)':
 		recipe.to_method('fry')
-		
-	# recipe.to_vegan()
-	# recipe.from_vegan()
-	# recipe.to_vegetarian()
-	# recipe.from_vegetarian()
-	# recipe.to_pescatarian()
-	# recipe.from_pescatarian()
-	# recipe.to_healthy()
-	# recipe.from_healthy()
-	# recipe.to_style('Thai')
-	# recipe.to_style('Mexican')
-	# recipe.to_method('bake')
-	print(recipe.to_JSON())
-	# recipe.compare_to_original()
-	# recipe.to_method('fry')
 	
 	s += recipe.to_JSON() 
 	s += recipe.compare_to_original()
 
 	return s
 
-	# # recipe.print_pretty()
-
-#============================================================================
-# Start webPy environment
-#============================================================================
 
 render = web.template.render('templates/')
 
@@ -1450,8 +1457,15 @@ class index:
             # form.d.boe and form['boe'].value are equivalent ways of
             # extracting the validated arguments from the form.
             # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
-            return main(form.d.url, form['transformation'].value)
+            return main_gui(form.d.url, form['transformation'].value)
 
 if __name__ == "__main__":
-	web.internalerror = web.debugerror
-	app.run()
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--gui", help="run application on locally hosted webpage", action="store_true")
+
+	args = parser.parse_args()
+	if args.gui:
+		web.internalerror = web.debugerror
+		app.run()
+	else:
+		main()
