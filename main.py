@@ -65,7 +65,8 @@ healthy_substitutes = {
 	'eggs': '3 egg whites',
 	'milk': '4 ounces of skim milk',
 	'potatoes': '4 handfuls of arugula',
-	'french fries': '4 handfuls of arugula'
+	'french fries': '4 handfuls of arugula',
+	'yogurt': '2 cups of low-fat cottage cheese'
 
 }
 
@@ -538,7 +539,7 @@ class Recipe(object):
 				self.swap_ingredients(self.ingredients[i], dairy_sub)
 		
 		# update the name of the recipe
-		self.name = self.name + ' (vegan)'
+		self.name = self.name.replace(' (vegetarian)', '') + ' (vegan)'
 
 
 	def from_vegan(self):
@@ -848,6 +849,29 @@ class Recipe(object):
 
 
 		self.name = self.name + ' (' + method + ' )'
+
+
+	def to_easy(self):
+		"""
+		makes recipes easier by replacing freshly made ingredients with store-bought, 
+		disallowing finely done ingredients, and only allowing one type of chees
+		"""		
+		for i, ingredient in enumerate(self.ingredients):
+			if 'freshly' in ingredient.descriptor:
+				ingredient.descriptor.remove('freshly')
+				ingredient.descriptor.append('store-bought')
+			if 'finely' in ingredient.descriptor:
+				ingredient.descriptor.remove('finely')
+			self.ingredients[i] = ingredient
+
+		cheeses = [ing for ing in self.ingredients if re.search('cheese', ing.name)]
+		if len(cheeses) > 1:
+			for i in range(1, len(cheeses)):
+				first_cheese = copy.deepcopy(cheeses[0])
+				first_cheese.measurement = cheeses[i].measurement
+				first_cheese.quantity = cheeses[i].quantity
+				print cheeses[0].quantity
+				self.swap_ingredients(cheeses[i], first_cheese)
 
 
 	def freq_dist(self, data):
@@ -1176,19 +1200,21 @@ def main():
 		# 'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
 		# 'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
 
-		'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
+		'https://www.allrecipes.com/recipe/20545/bruschetta-iii/'
+		# 'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
+		# 'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
 
 	]
 	for url in URLS:
 		recipe_attrs = parse_url(url)
 		recipe = Recipe(**recipe_attrs)
+		recipe.to_easy()
 		print(recipe.to_JSON())
 
 	# recipe_attrs = parse_url(URL)
