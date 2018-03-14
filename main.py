@@ -1189,10 +1189,10 @@ def main(url, method):
 		'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
 
 	]
-	for url in URLS:
-		recipe_attrs = parse_url(url)
-		recipe = Recipe(**recipe_attrs)
-		return recipe.to_JSON()
+	#for url in URLS:
+	recipe_attrs = parse_url(url)
+	recipe = Recipe(**recipe_attrs)
+	return recipe.to_JSON()
 
 	# recipe_attrs = parse_url(URL)
 	# recipe = Recipe(**recipe_attrs)
