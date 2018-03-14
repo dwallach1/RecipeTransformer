@@ -799,11 +799,16 @@ class Recipe(object):
 
 		instruction_words = {
 			'bake': [('preheat', ''), ('preheated', ''), ('oven', ''), ('degree', ''), ('baking sheet', 'skillet'), ('bake', 'cook'), ('baked', 'cooked')],
-			'fry': [],
-			'stir-fry': []
+			'fry': [('skillet', 'baking sheet'), ('fry', 'place in oven')],
+			'stir-fry': [('skillet', 'baking sheet')]
 		}
 
-		
+
+		#
+		#
+		#  Fry
+		#
+		#
 
 		if method == 'fry':
 			# vegetable and meat booleans 
@@ -840,6 +845,22 @@ class Recipe(object):
 				V = bool(len(vegetables))
 				meat = meats[0]
 
+			
+			if re.search('Preheat oven to', self.instructions[0].instruction):
+				self.instructions = self.instructions[1:]
+
+			# remove / update all instructions that correlated to previous cooking methods
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + ')'
+			for i, instruction in enumerate(self.instructions):
+				inst = ' ' + instruction.instruction.lower()
+				if re.search(other_method_regex, inst, flags=re.I):
+					other_words = instruction_words['bake'] 
+					for word in other_words:
+						if inst.find(word[0]):
+							inst = inst.replace(word[0], word[1])
+							self.instructions[i].instruction = inst.strip()	# update instruction object in memory --> make permanent 
+
+
 
 			# add necessary instructions
 			instruction_meat = 'In a large skillet, heat oil over medium heat. Salt and pepper {0} to taste, then roll in flour to coat. \
@@ -860,6 +881,11 @@ class Recipe(object):
 			self.cooking_tools = ['skillet']
 			self.cooking_methods = ['fry']
 
+		#
+		#
+		#	Stir-fry
+		#
+		#
 
 		elif method == 'stir-fry':
 
@@ -881,18 +907,16 @@ class Recipe(object):
 				self.instructions = self.instructions[1:]
 
 			# remove / update all instructions that correlated to previous cooking methods
-			# delete_idxs = []
-			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['bake']) + ')'
 			for i, instruction in enumerate(self.instructions):
-				inst = instruction.instruction.lower()
-				if re.search(other_method_regex, inst, re.I):
-					other_words = instruction_words['bake'] + instruction_words['fry']
+				inst = ' ' + instruction.instruction.lower()
+				if re.search(other_method_regex, inst, flags=re.I):
+					other_words = instruction_words['bake'] 
 					for word in other_words:
 						if inst.find(word[0]):
 							inst = inst.replace(word[0], word[1])
-							self.instructions[i].instruction = inst 	# update instruction object in memory --> make permanent 
+							self.instructions[i].instruction = inst.strip() 	# update instruction object in memory --> make permanent 
 
-			# self.instructions = [i for j, i in enumerate(self.instructions) if j not in delete_idxs]
 			
 
 
@@ -907,6 +931,11 @@ class Recipe(object):
 			# update instructions
 			self.instructions.insert(-1, Instruction(instruction_vegetables.strip()))
 
+		#
+		#
+		# 	Baking
+		#
+		#
 
 		# otherwise it must be 'bake' due to process of elimination
 		else:
@@ -916,7 +945,7 @@ class Recipe(object):
 
 			# update cooking methods and tools
 			self.cooking_methods = ['Bake']
-			current_tools = self.tools
+			current_tools = self.cooking_tools
 			self.cooking_tools = ['pan', 'oven', 'dish', 'bowl']
 
 			bake_instruction_idx = 1
@@ -933,19 +962,22 @@ class Recipe(object):
 
 
 			# remove / update all instructions that correlated to previous cooking methods
-			delete_idxs = []
-			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['stir-fry']) + '|'.join(w[0] for w in instruction_words['fry']) + ')'
+			other_method_regex = '(' + '|'.join(w[0] for w in instruction_words['fry']) + ')'
 			for i, instruction in enumerate(self.instructions):
-				inst = instruction.instruction
-				if re.search(other_method_regex, instruction, re.I):
-					pass
+				inst = ' ' + instruction.instruction.lower()
+				if re.search(other_method_regex, inst, flags=re.I):
+					other_words = instruction_words['fry'] 
+					for word in other_words:
+						if inst.find(word[0]):
+							inst = inst.replace(word[0], word[1])
+							self.instructions[i].instruction = inst.strip() 	# update instruction object in memory --> make permanent 
 
-			self.instructions = [i for j, i in enumerate(self.instructions) if j not in delete_idxs]
 
 
 			# update proper instructions
-			self.instructions.insert(-1, begin_instruction)
-			self.instructions.insert(bake_instruction_idx, bake_instruction)
+			self.instructions.insert(0, begin_instruction)
+			if re.search('serve', self.instructions[-1].instruction, flags=re.I):
+				self.instructions.insert(bake_instruction_idx, bake_instruction)
 
 		
 		self.update_instructions()
@@ -1262,33 +1294,33 @@ def main():
 	# parse websites to build global lists -- used for Ingredient type tagging
 	build_dynamic_lists()
 
-	URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
-	URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
-	URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
+	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
+	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	URL = 'https://www.allrecipes.com/recipe/8836/fried-chicken/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%202'
-	URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
+	# URL = 'https://www.allrecipes.com/recipe/52005/tender-italian-baked-chicken/?internalSource=staff%20pick&referringId=201&referringContentType=recipe%20hub'
 
-	URLS = [
-		'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
-		'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
-		'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
-		'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
-		'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
-		'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
-		'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
-		'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
-		'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
-		'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
+	# URLS = [
+	# 	'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
+	# 	'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
+	# 	'https://www.allrecipes.com/recipe/234592/buffalo-chicken-stuffed-shells/',
+	# 	'https://www.allrecipes.com/recipe/23109/rainbow-citrus-cake/',
+	# 	'https://www.allrecipes.com/recipe/219910/homemade-cream-filled-sponge-cakes/',
+	# 	'https://www.allrecipes.com/recipe/16700/salsa-chicken/?internalSource=hub%20recipe&referringId=1947&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/109190/smooth-sweet-tea/',
+	# 	'https://www.allrecipes.com/recipe/220943/chef-johns-buttermilk-biscuits/',
+	# 	'https://www.allrecipes.com/recipe/24501/tangy-honey-glazed-ham/?internalSource=hub%20recipe&referringId=15876&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/247204/red-split-lentils-masoor-dal/?internalSource=staff%20pick&referringId=233&referringContentType=recipe%20hub'
+	# 	'https://www.allrecipes.com/recipe/233856/mauigirls-smoked-salmon-stuffed-pea-pods/?internalSource=staff%20pick&referringId=416&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/169305/sopapilla-cheesecake-pie/?internalSource=hub%20recipe&referringId=728&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/85389/gourmet-mushroom-risotto/?internalSource=hub%20recipe&referringId=723&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/138020/st-patricks-colcannon/?internalSource=staff%20pick&referringId=197&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/18241/candied-carrots/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/18870/roast-leg-of-lamb-with-rosemary/?internalSource=hub%20recipe&referringId=194&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/8270/sams-famous-carrot-cake/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub',
+	# 	'https://www.allrecipes.com/recipe/13717/grandmas-green-bean-casserole/?internalSource=hub%20recipe&referringId=188&referringContentType=recipe%20hub'
 
-	]
+	# ]
 
 	# for url in URLS:
 	# 	recipe_attrs = parse_url(url)
@@ -1309,7 +1341,7 @@ def main():
 	# recipe.from_healthy()
 	# recipe.to_style('Thai')
 	# recipe.to_style('Mexican')
-	recipe.to_method('stir-fry')
+	recipe.to_method('bake')
 	# recipe.to_method('fry')
 	print(recipe.to_JSON())
 	recipe.compare_to_original()
