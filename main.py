@@ -31,7 +31,8 @@ import copy
 import requests
 from bs4 import BeautifulSoup
 from nltk import word_tokenize, pos_tag
- 
+import web
+from web import form
 
 DEBUG = False
 
@@ -1152,7 +1153,7 @@ def timeit(method):
 
 
 @timeit
-def main():
+def main(url, method):
 	"""
 	main function -- runs all initalization and any methods user wants 
 	"""
@@ -1161,9 +1162,11 @@ def main():
 	build_dynamic_lists()
 
 	# URL = 'http://allrecipes.com/recipe/234667/chef-johns-creamy-mushroom-pasta/?internalSource=rotd&referringId=95&referringContentType=recipe%20hub'
-	URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
+	# URL = 'http://allrecipes.com/recipe/21014/good-old-fashioned-pancakes/?internalSource=hub%20recipe&referringId=1&referringContentType=recipe%20hub'
 	# URL = 'https://www.allrecipes.com/recipe/60598/vegetarian-korma/?internalSource=hub%20recipe&referringId=1138&referringContentType=recipe%20hub'
 	
+	URL = url
+
 	URLS = [
 		# 'https://www.allrecipes.com/recipe/213717/chakchouka-shakshouka/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%201',
 		# 'https://www.allrecipes.com/recipe/216756/baked-ham-and-cheese-party-sandwiches/?internalSource=hub%20recipe&referringContentType=search%20results&clickId=cardslot%205',
@@ -1189,7 +1192,7 @@ def main():
 	for url in URLS:
 		recipe_attrs = parse_url(url)
 		recipe = Recipe(**recipe_attrs)
-		print(recipe.to_JSON())
+		return recipe.to_JSON()
 
 	# recipe_attrs = parse_url(URL)
 	# recipe = Recipe(**recipe_attrs)
@@ -1210,6 +1213,37 @@ def main():
 	# # recipe.compare_to_original()
 	# # recipe.print_pretty()
 
+#============================================================================
+# Start webPy environment
+#============================================================================
+
+render = web.template.render('templates/')
+
+urls = ('/', 'index')
+app = web.application(urls, globals())
+
+myform = form.Form( 
+    form.Textbox("url", 
+        form.notnull), 
+    form.Dropdown('transformation', ['to_vegan', 'from_vegan', 'to_vegetarian', 'from_vegetarian', 'to_pescatarian', 'from_pescatarian', 'to_healthy', 'from_healthy', 'to_style(Thai)', 'to_style(Mexican)', 'to_method(stir-fry)', 'to_method(fry)']))
+
+class index: 
+    def GET(self): 
+        form = myform()
+        # make sure you create a copy of the form by calling it (line above)
+        # Otherwise changes will appear globally
+        return render.formtest(form)
+
+    def POST(self): 
+        form = myform() 
+        if not form.validates(): 
+            return render.formtest(form)
+        else:
+            # form.d.boe and form['boe'].value are equivalent ways of
+            # extracting the validated arguments from the form.
+            # return "Grrreat success! boe: %s, bax: %s" % (form.d.boe, form['bax'].value)
+            return main(form.d.url, form['transformation'].value)
 
 if __name__ == "__main__":
-	main()
+	web.internalerror = web.debugerror
+	app.run()
