@@ -512,7 +512,7 @@ class Recipe(object):
 			else:
 				for i in range(len(self.original_recipe.instructions)):
 					if self.original_recipe.instructions[i].instruction != self.instructions[i].instruction:
-						s += '\n* {} ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction)
+						s += '\n* {}\n ---> {}'.format(self.original_recipe.instructions[i].instruction, self.instructions[i].instruction)
 			s += '\n-----------------------'
 		except:
 			s += '\n-----------------------'
