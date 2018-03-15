@@ -47,7 +47,7 @@ method_indicator_regex = '(boil|bake|baking|simmer|stir|roast|fry)'
 time_indicator_regex = '(min|hour)'
 
 # these are used as last resort measures to sort out names, descriptors, and preperation words that our system is having trouble parsing
-descriptor_regex = '(color|mini|container|skin|bone|halves|fine|parts|leftover|style|frying)'
+descriptor_regex = '(color|mini|container|skin|bone|halves|fine|parts|leftover|style|frying|breast)'
 preperation_regex = '(room|temperature|divided|sliced|dice|mince|chopped|quartered|cored|shredded|seperated|pieces)'
 names_regex = '(garlic|poppy|baking|sour|cream|broth|chicken|olive|mushroom|green|vegetable|bell)'
 
@@ -705,7 +705,7 @@ class Recipe(object):
 
 		# parse the urls and create new Recipe objects
 		style_recipes = [Recipe(**parse_url(recipe)) for recipe in style_recipes]	# instantiate all recipe objects for each found recipe
-		print ('found {} recipes cooked {} style'.format(len(style_recipes), style))
+		# print ('found {} recipes cooked {} style'.format(len(style_recipes), style))
 
 		# unpack all ingredients in total set of new recipes of type 'style'
 		ingredients_ = [recipe.ingredients for recipe in style_recipes]
@@ -1373,11 +1373,11 @@ def main():
 
 	recipe_attrs = parse_url(URL)
 	recipe = Recipe(**recipe_attrs)
-		
+	print(recipe.to_JSON())	
 	# recipe.to_vegan()
 	# recipe.from_vegan()
 
-	recipe.to_vegan()
+	# recipe.to_vegan()
 	# recipe.from_vegan()
 	# recipe.to_vegetarian()
 	# recipe.from_vegetarian()
@@ -1386,11 +1386,11 @@ def main():
 	# recipe.to_healthy()
 	# recipe.from_healthy()
 	# recipe.to_style('Thai')
-	# recipe.to_style('Mexican')
+	recipe.to_style('Mexican')
 	# recipe.to_method('bake')
 	# recipe.to_easy();
 	print(recipe.to_JSON())
-	# recipe.compare_to_original()
+	print(recipe.compare_to_original())
 	# recipe.to_method('fry')
 	# # recipe.print_pretty()
 
