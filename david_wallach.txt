@@ -1,0 +1,11 @@
+David Wallach (daw647)
+What I contributed:
+	* parsing input URL
+	* parsing wiki pages to build out lists 
+	* class structure / program architecture
+	* to/from vegan
+	* to/from vegetarian
+	* to/from pescatarian
+	* to style
+	* to method
+
