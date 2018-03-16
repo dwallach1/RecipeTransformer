@@ -1,0 +1,5 @@
+Junhao Li (jlo708)
+What I contributed:
+	* initial to vegetarian (always replaced meats w/tofu and meat stocks w/vegetable broth)
+	* initial from vegetarian (always added chicken)
+	* to easy
