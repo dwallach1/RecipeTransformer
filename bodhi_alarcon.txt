@@ -1,0 +1,4 @@
+Bodhi Alarcon (bta566)
+Contributions:
+	* GUI for the recipe transformer
+	* additional testing
